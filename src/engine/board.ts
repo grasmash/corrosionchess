@@ -1,4 +1,4 @@
-import { Color, PieceType, GameState, Config } from './types';
+import type { Color, PieceType, GameState, Config, Piece } from './types';
 
 export const FILES = 'abcdefghijkl';
 
@@ -57,7 +57,7 @@ export function forwardDir(color: Color): 1 | -1 {
 
 export function initialState(config: Config): GameState {
   const size = config.bigBoard ? 12 : 8;
-  const board: (typeof GameState.prototype.board) = Array(size * size).fill(null);
+  const board: (Piece | null)[] = Array(size * size).fill(null);
   const off = offsetOf(size);
 
   // Standard back rank order: r n b q k b n r
