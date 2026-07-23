@@ -10,7 +10,7 @@ import './style.css';
 import { createBoardView } from './ui/boardview';
 import type { CgBoardView } from './ui/cgboard';
 import { renderOverlays } from './ui/overlays';
-import { showSetup, encodeConfig, decodeConfig, describeConfig } from './ui/setup';
+import { showSetup, encodeConfig, decodeConfig, describeConfig, currentLastConfig, setLastConfig } from './ui/setup';
 import type { SetupResult } from './ui/setup';
 import { renderHud, pickPromotion } from './ui/hud';
 import type { NetStatus } from './ui/hud';
@@ -56,6 +56,59 @@ function backToSetup(): void {
   start();
 }
 
+/**
+ * Nav-state for the config screen's "Back preserves selections" behavior:
+ * `lastConfig` starts from whatever was last confirmed in a previous session
+ * (`currentLastConfig`, itself defaulting to Tier 1+2 on for a first-ever
+ * visit -- see setup.ts), and is updated every time the config screen's
+ * primary button fires. `lastPersonaId` is session-only (not persisted --
+ * only the config toggles were asked to survive a reload): remembers which
+ * bot-roster card was selected so a roster -> Back -> config -> Choose Bot
+ * round trip re-highlights it instead of starting the roster fresh.
+ */
+let lastConfig: Config = currentLastConfig();
+let lastPersonaId: string | undefined;
+
+/**
+ * Opens the config screen for a mode already chosen on splash (or being
+ * returned to from the bot roster's Back button), prefilled with
+ * `lastConfig`. Centralizing this (rather than inlining `showSetup` at each
+ * call site) is what lets the bot roster's Back button reopen the SAME
+ * config screen instead of falling all the way back to splash.
+ */
+function openConfig(mode: 'hotseat' | 'host' | 'bot'): void {
+  showSetup(
+    result => {
+      lastConfig = result.config;
+      setLastConfig(result.config);
+      if (result.mode === 'host') {
+        startHostGame(result.config);
+      } else if (result.mode === 'bot') {
+        showBotSelect(
+          persona => {
+            lastPersonaId = persona.id;
+            startBotGame(result.config, persona);
+          },
+          selectedId => {
+            // A card can be highlighted without ever clicking Play; still
+            // worth remembering for the next "Choose Bot" round trip.
+            if (selectedId) lastPersonaId = selectedId;
+            openConfig('bot'); // Back -> config, one step, selections intact.
+          },
+          lastPersonaId,
+        );
+      } else {
+        // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
+        // 'join' is intercepted by start() before showSetup() ever runs.
+        startGame(result);
+      }
+    },
+    () => start(), // Back -> splash is the only mode chooser now.
+    mode,
+    lastConfig,
+  );
+}
+
 /** Top-level router: `#join=<id>&cfg=<token>` vs. the setup screen, plus a
  * DEV-only `#vfxlab` escape hatch straight to the VFX Lab (see mountVfxLab's
  * own doc comment) -- the `import.meta.env.DEV` check here matches the one
@@ -86,26 +139,7 @@ function start(): void {
     return;
   }
 
-  showSplash(mode => {
-    showSetup(
-      result => {
-        if (result.mode === 'host') {
-          startHostGame(result.config);
-        } else if (result.mode === 'bot') {
-          showBotSelect(
-            persona => startBotGame(result.config, persona),
-            () => start(),
-          );
-        } else {
-          // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
-          // 'join' is intercepted by start() above before showSetup() ever runs.
-          startGame(result);
-        }
-      },
-      () => start(), // Back -> splash is the only mode chooser now.
-      mode,
-    );
-  });
+  showSplash(mode => openConfig(mode));
 }
 
 /**

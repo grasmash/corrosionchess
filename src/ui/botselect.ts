@@ -74,9 +74,20 @@ function buildSection(title: string, personas: Persona[], onSelect: (p: Persona)
  * Renders the chess.com-style bot roster into `#app`: a "Family & Pets"
  * section (the six named personas) then "The Bobs" (the Bob army + Joe).
  * Clicking a card highlights it and enables "Play"; "Play" invokes `onPick`,
- * "Back" invokes `onBack`.
+ * "Back" invokes `onBack`. `initialPersonaId`, if it names a known persona,
+ * pre-highlights that card and enables Play on mount -- lets a Back-then-
+ * forward round trip (config screen -> roster -> Back -> config -> Choose
+ * Bot again) restore whichever persona was previously selected instead of
+ * always starting the roster fresh. `onBack` receives whichever persona is
+ * CURRENTLY highlighted (if any) at the moment Back is pressed -- a card
+ * can be selected/highlighted without ever clicking Play, and that
+ * selection should still be what a later "Choose Bot" round trip restores.
  */
-export function showBotSelect(onPick: (p: Persona) => void, onBack: () => void): void {
+export function showBotSelect(
+  onPick: (p: Persona) => void,
+  onBack: (selectedId?: string) => void,
+  initialPersonaId?: string,
+): void {
   const el = document.querySelector<HTMLDivElement>('#app');
   if (!el) throw new Error('showBotSelect: #app element not found');
   el.innerHTML = '';
@@ -123,13 +134,18 @@ export function showBotSelect(onPick: (p: Persona) => void, onBack: () => void):
     wrap.appendChild(buildSection('Coach', coaches, handleSelect));
   }
 
+  if (initialPersonaId) {
+    const prior = PERSONAS.find(p => p.id === initialPersonaId);
+    if (prior) handleSelect(prior);
+  }
+
   const buttons = document.createElement('div');
   buttons.className = 'setup-buttons bot-select-buttons';
 
   const backBtn = document.createElement('button');
   backBtn.className = 'btn btn-secondary';
   backBtn.textContent = 'Back';
-  backBtn.onclick = onBack;
+  backBtn.onclick = () => onBack(selected?.id);
 
   buttons.append(backBtn, playBtn);
   wrap.appendChild(buttons);

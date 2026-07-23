@@ -40,6 +40,45 @@ export function describeConfig(c: Config): string {
   return `${tierText} · ${boardText}`;
 }
 
+const LAST_CONFIG_KEY = 'lastconfig';
+/** First-ever-visit default (user request): Tier 1 + Tier 2 on, Tier 3 and
+ * the 12x12 board off. Only used when nothing has been persisted yet --
+ * once a player has confirmed any config, `currentLastConfig` returns that
+ * instead (see below). */
+const DEFAULT_CONFIG: Config = { tier1: true, tier2: true, tier3: false, bigBoard: false };
+
+/**
+ * Reads the last config a player confirmed (Start Game / Create Game /
+ * Choose Bot), so re-entering the config screen from splash prefills their
+ * previous toggle selections instead of resetting them. Falls back to
+ * `DEFAULT_CONFIG` if nothing is stored yet or `localStorage` throws
+ * (private-browsing/storage-disabled -- same guard as piecesets.ts/
+ * boardthemes.ts). Reuses `encodeConfig`/`decodeConfig`'s existing
+ * single-hex-digit token rather than a new format.
+ */
+export function currentLastConfig(): Config {
+  let stored: string | null;
+  try {
+    stored = localStorage.getItem(LAST_CONFIG_KEY);
+  } catch {
+    return DEFAULT_CONFIG;
+  }
+  if (!stored || !/^[0-9a-f]$/i.test(stored)) return DEFAULT_CONFIG;
+  return decodeConfig(stored);
+}
+
+/** Persists the config a player just confirmed. Swallows a persistence
+ * failure -- the caller's own in-memory nav state (main.ts's `lastConfig`)
+ * still remembers it for the rest of this session either way, it just
+ * won't survive a reload. */
+export function setLastConfig(c: Config): void {
+  try {
+    localStorage.setItem(LAST_CONFIG_KEY, encodeConfig(c));
+  } catch {
+    /* storage unavailable -- in-memory nav state still covers this session */
+  }
+}
+
 /** Per-mode copy: the splash screen is the ONLY place a player picks a mode
  * (Play Bots / Pass & Play / Play Online) -- this config card just
  * configures the corrosion tiers/board size for whichever mode was already
@@ -62,12 +101,16 @@ const MODE_PRIMARY_LABEL: Record<'hotseat' | 'host' | 'bot', string> = {
  * confirms. Enforces the tier dependency chain (tier N requires tier N-1
  * checked) directly in the checkbox change handlers, not just visually.
  * `onBack` wires the Back button, which returns to the splash screen (the
- * only mode chooser -- see plan note above).
+ * only mode chooser -- see plan note above). `initialConfig` prefills the
+ * toggles (typically the caller's last-confirmed config, via
+ * `currentLastConfig`) so returning here -- from splash OR from the bot
+ * roster's Back button -- doesn't reset the player's selections.
  */
 export function showSetup(
   onStart: (r: SetupResult) => void,
   onBack: () => void,
   mode: 'hotseat' | 'host' | 'bot',
+  initialConfig: Config,
 ): void {
   const el = document.querySelector<HTMLDivElement>('#app');
   if (!el) throw new Error('showSetup: #app element not found');
@@ -114,11 +157,15 @@ export function showSetup(
   const tier3 = makeToggle('tier3', 'Tier 3 corrosion');
   const bigBoard = makeToggle('bigBoard', 'Enlarged board (12x12)');
 
-  // Default game options (user request): Tier 1 + Tier 2 on, Tier 3 off.
-  // Board size stays off (8x8) by default. Set before syncTierChain() runs
-  // so it computes tier3's disabled state from these, not from all-unchecked.
-  tier1.input.checked = true;
-  tier2.input.checked = true;
+  // Prefill from the caller's `initialConfig` (last-confirmed selections,
+  // or DEFAULT_CONFIG on a first-ever visit -- see `currentLastConfig`).
+  // Set before syncTierChain() runs below so it computes tier2/tier3's
+  // disabled state from these values, not from all-unchecked; syncTierChain
+  // also self-heals an invalid stored combo (e.g. tier3 on with tier2 off).
+  tier1.input.checked = initialConfig.tier1;
+  tier2.input.checked = initialConfig.tier2;
+  tier3.input.checked = initialConfig.tier3;
+  bigBoard.input.checked = initialConfig.bigBoard;
 
   // Dependency chain: tier N requires tier N-1. Enforce in the change
   // handlers (not just via a one-time `disabled` computed at render time)
