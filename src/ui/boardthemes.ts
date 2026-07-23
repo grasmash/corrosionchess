@@ -55,8 +55,8 @@ export const BOARD_THEMES: BoardTheme[] = [
     light: '#6e7268',
     dark: '#1f2320',
     lastmove: CORRODED_LASTMOVE,
-    lightTex: '/vfx/board/stone-light.png',
-    darkTex: '/vfx/board/stone-dark.png',
+    lightTex: 'vfx/board/stone-light.png',
+    darkTex: 'vfx/board/stone-dark.png',
   },
 ];
 
@@ -116,7 +116,12 @@ export function applyBoardTheme(id: string): void {
   root.setProperty('--board-light', theme.light);
   root.setProperty('--board-dark', theme.dark);
   root.setProperty('--board-lastmove', theme.lastmove);
-  root.setProperty('--board-light-tex', theme.lightTex ? `url(${theme.lightTex})` : 'none');
-  root.setProperty('--board-dark-tex', theme.darkTex ? `url(${theme.darkTex})` : 'none');
+  // Resolve the base-relative texture paths against the document base HERE,
+  // not in CSS: a relative url() carried through a custom property gets
+  // resolved against the stylesheet that consumes it (the built
+  // assets/index-*.css on a production build), not the page -- which 404s
+  // under the GitHub Pages subpath deploy.
+  root.setProperty('--board-light-tex', theme.lightTex ? `url(${new URL(theme.lightTex, document.baseURI).href})` : 'none');
+  root.setProperty('--board-dark-tex', theme.darkTex ? `url(${new URL(theme.darkTex, document.baseURI).href})` : 'none');
   document.body.dataset.boardtheme = theme.id;
 }

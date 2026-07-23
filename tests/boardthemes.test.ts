@@ -39,8 +39,11 @@ it('manifest lists green first (matches style.css :root fallback), unique ids, a
 
 it('corroded theme (plan 006 default) carries both texture URLs; other themes carry neither', () => {
   const corroded = BOARD_THEMES.find(t => t.id === 'corroded')!;
-  expect(corroded.lightTex).toBe('/vfx/board/stone-light.png');
-  expect(corroded.darkTex).toBe('/vfx/board/stone-dark.png');
+  // Base-relative (no leading slash): the app deploys under a subpath on
+  // GitHub Pages (grasmash.github.io/corrosionchess/), where absolute /vfx/
+  // URLs 404 — see vite.config.ts's `base: './'` comment.
+  expect(corroded.lightTex).toBe('vfx/board/stone-light.png');
+  expect(corroded.darkTex).toBe('vfx/board/stone-dark.png');
   for (const t of BOARD_THEMES.filter(t => t.id !== 'corroded')) {
     expect(t.lightTex).toBeUndefined();
     expect(t.darkTex).toBeUndefined();

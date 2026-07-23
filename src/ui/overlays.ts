@@ -54,9 +54,9 @@ interface UnitDivEntry {
 // owner, same reasoning as unitVariantClass below). Paths are under
 // public/vfx/, served at this root path by Vite in both dev and build.
 const SPRITE_PATHS: Record<'w' | 'b' | 'cls3', string[]> = {
-  w: ['/vfx/acid-w-1.png', '/vfx/acid-w-2.png'],
-  b: ['/vfx/acid-b-1.png', '/vfx/acid-b-2.png'],
-  cls3: ['/vfx/acid-cls3-1.png'],
+  w: ['vfx/acid-w-1.png', 'vfx/acid-w-2.png'],
+  b: ['vfx/acid-b-1.png', 'vfx/acid-b-2.png'],
+  cls3: ['vfx/acid-cls3-1.png'],
 };
 
 function spriteFor(color: Color, cls: 1 | 2 | 3, unitId: number): string {
