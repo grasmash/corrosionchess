@@ -10,8 +10,15 @@
   --accent: #81b64c;
   --accent-hover: #a3d160;
   --accent-shadow: #5a8235;
+  /* White text on --accent/--accent-hover is only ~2.4:1 -- fails WCAG AA
+   * (4.5:1). Dark text instead; verified arithmetically against both fills
+   * (see style guide notes on .btn-primary below). */
+  --accent-text: #142008;
   --danger: #fa412d;
   --danger-shadow: #b32c1e;
+  /* Same problem as --accent: white text on --danger is ~3.58:1, still
+   * short of 4.5:1. */
+  --danger-text: #200604;
   --secondary: #454341;
   --secondary-shadow: #2b2a28;
 }
@@ -345,6 +352,10 @@ input[type='text'] {
 
 .btn-primary {
   background: var(--accent);
+  /* #142008 on #81b64c (--accent) is ~6.2:1; on #a3d160 (--accent-hover,
+   * below) it's ~8.5:1 -- both clear WCAG AA (4.5:1). White text here was
+   * only ~2.4:1 (reviewer finding). */
+  color: var(--accent-text);
   box-shadow: 0 4px 0 var(--accent-shadow);
 }
 
@@ -375,6 +386,10 @@ input[type='text'] {
 
 .btn-danger {
   background: var(--danger);
+  /* #200604 on #fa412d is ~5.4:1, clearing WCAG AA. White text here was
+   * only ~3.58:1 (reviewer finding) -- not currently used by any button,
+   * but fixed proactively since it's live theme CSS. */
+  color: var(--danger-text);
   box-shadow: 0 4px 0 var(--danger-shadow);
 }
 
