@@ -23,18 +23,41 @@ function resultText(gs: GameState): string {
   return winner ? `${colorName(winner)} wins by ${reason}` : `Draw by ${reason}`;
 }
 
+export type NetStatus = 'connecting' | 'open' | 'closed';
+
+function netStatusText(s: NetStatus): string {
+  switch (s) {
+    case 'connecting':
+      return 'Connecting…';
+    case 'open':
+      return 'Connected';
+    case 'closed':
+      return 'Opponent disconnected — waiting…';
+  }
+}
+
 export interface HudOptions {
   youAre?: Color;
   onNewGame?: () => void;
+  /** Task 12: online games only -- omit entirely for hotseat. */
+  netStatus?: NetStatus;
 }
 
 /**
- * Renders the turn indicator, last 8 log events, and (when the game has
- * ended) a result banner with a "New game" button into `el`. Full redraw
- * each call, matching the rest of the UI layer's render-from-state pattern.
+ * Renders the (optional) net status line, turn indicator, last 8 log
+ * events, and (when the game has ended) a result banner with a "New game"
+ * button into `el`. Full redraw each call, matching the rest of the UI
+ * layer's render-from-state pattern.
  */
 export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {}): void {
   el.innerHTML = '';
+
+  if (opts.netStatus) {
+    const net = document.createElement('div');
+    net.className = `hud-net-status hud-net-status--${opts.netStatus}`;
+    net.textContent = netStatusText(opts.netStatus);
+    el.appendChild(net);
+  }
 
   const turn = document.createElement('div');
   turn.className = 'hud-turn';

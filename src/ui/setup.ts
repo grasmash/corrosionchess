@@ -99,8 +99,7 @@ export function showSetup(onStart: (r: SetupResult) => void): void {
 
   const onlineBtn = document.createElement('button');
   onlineBtn.textContent = 'Create online game';
-  onlineBtn.disabled = true;
-  onlineBtn.title = 'Online play arrives in Task 12';
+  onlineBtn.onclick = () => onStart({ config: currentConfig(), mode: 'host' });
 
   buttons.append(hotseatBtn, onlineBtn);
   wrap.appendChild(buttons);

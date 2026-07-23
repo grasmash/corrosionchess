@@ -206,6 +206,54 @@ body {
   font-weight: 600;
 }
 
+/* --- Task 12: online play (PeerJS) --- */
+
+.hud-net-status {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.hud-net-status--connecting {
+  background: rgba(160, 130, 0, 0.15);
+  color: #a08200;
+}
+
+.hud-net-status--open {
+  background: rgba(0, 128, 0, 0.15);
+  color: #0a7d0a;
+}
+
+.hud-net-status--closed {
+  background: rgba(128, 0, 0, 0.15);
+  color: #b00;
+}
+
+.host-wait-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  width: 100%;
+}
+
+.host-wait-url-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 480px;
+}
+
+.host-wait-url-row input {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
 .hud-result-banner {
   display: flex;
   align-items: center;
