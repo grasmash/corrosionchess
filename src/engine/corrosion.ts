@@ -22,6 +22,8 @@ function pieceName(t: PieceType): string {
   return PIECE_NAMES[t];
 }
 
+type Moved = { unit: CorrosionUnit; from: number; to: number };
+
 export function corrosionPhase(s: GameState): void {
   const size = s.size;
 
@@ -40,8 +42,11 @@ export function corrosionPhase(s: GameState): void {
 
   // 3. Move: every mover's cells += dir * size. cls 1/2 cells that would leave
   //    the board are dropped (promotion logic arrives in Task 7); unit removed
-  //    if it ends up empty.
-  const oldToNew = new Map<number, { unit: CorrosionUnit; old: number; niu: number }>();
+  //    if it ends up empty. Recorded as a plain list, NOT a Map keyed by
+  //    origin square: two movers can share an origin square (e.g. same-color
+  //    units that converged onto one cell in an earlier phase), and a
+  //    Map<square, ...> would silently overwrite/drop one of them.
+  const moved: Moved[] = [];
   for (const u of movers) {
     const newCells: number[] = [];
     for (const c of u.cells) {
@@ -53,24 +58,15 @@ export function corrosionPhase(s: GameState): void {
       }
       const niu = c + u.dir * size;
       newCells.push(niu);
-      oldToNew.set(c, { unit: u, old: c, niu });
+      moved.push({ unit: u, from: c, to: niu });
     }
     u.cells = newCells;
-  }
-  s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
-
-  // Build the set of surviving mover cells (post-move) with their unit + origin.
-  type Moved = { unit: CorrosionUnit; from: number; to: number };
-  const moved: Moved[] = [];
-  for (const entry of oldToNew.values()) {
-    if (entry.unit.cells.includes(entry.niu)) {
-      moved.push({ unit: entry.unit, from: entry.old, to: entry.niu });
-    }
   }
 
   // 4. Swap annihilation: for every pair of units hostile to each other where
   //    some cell of A moved old->new and some cell of B moved new->old (exact
-  //    swap), destroy both those cells.
+  //    swap), destroy both those cells. Movers only — dormant cells never
+  //    moved, so they cannot participate in a swap.
   const destroyed = new Set<Moved>();
   for (let i = 0; i < moved.length; i++) {
     const a = moved[i];
@@ -87,11 +83,9 @@ export function corrosionPhase(s: GameState): void {
       }
     }
   }
-
   for (const m of destroyed) {
     m.unit.cells = m.unit.cells.filter(c => c !== m.to);
   }
-  s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
 
   // 5. Same-square annihilation: group ALL surviving cells (movers AND
   //    dormant born-this-round units — a corrosion of one color intersecting
@@ -120,25 +114,26 @@ export function corrosionPhase(s: GameState): void {
       for (const u of owners) u.cells = u.cells.filter(c => c !== square);
     }
   }
-  s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
-
-  // Recompute survivors (movers only, per steps 6-7) now that steps 4-5 have
-  // finished destroying cells.
-  const survivors = moved.filter(m => m.unit.cells.includes(m.to));
 
   // 6. Purple deaths: any cell of cls 1/2 standing on purple is destroyed
-  //    (cls 3 immune).
-  for (const m of survivors) {
-    if (m.unit.cls !== 3 && s.purple.includes(m.to)) {
-      m.unit.cells = m.unit.cells.filter(c => c !== m.to);
-      s.log.push({ round: s.round, text: `Corrosion dies in purple at ${toAlg(m.to, size)}` });
-    }
+  //    (cls 3 immune) — applies to ALL units' cells, movers and dormant
+  //    born-this-round units alike, consistent with the step-5 ruling.
+  for (const u of s.corrosions) {
+    if (u.cls === 3) continue;
+    u.cells = u.cells.filter(c => {
+      if (!s.purple.includes(c)) return true;
+      s.log.push({ round: s.round, text: `Corrosion dies in purple at ${toAlg(c, size)}` });
+      return false;
+    });
   }
-  s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
+
+  // Surviving mover cells for step 7, now that steps 4-6 have finished
+  // destroying cells (movers only — dormant cells never strike).
+  const survivors = moved.filter(m => m.unit.cells.includes(m.to));
 
   // 7. Strikes: for each surviving mover cell, p = board[cell]
   for (const m of survivors) {
-    if (!m.unit.cells.includes(m.to)) continue; // died in purple above
+    if (!m.unit.cells.includes(m.to)) continue; // consumed by an earlier strike this same loop
     const p = s.board[m.to];
     if (!p) continue;
     const alg = toAlg(m.to, size);
@@ -158,5 +153,9 @@ export function corrosionPhase(s: GameState): void {
   }
 
   // 8. Remove units with zero cells. (Promotions appended here by Task 7.)
+  //    This is the only place s.corrosions needs filtering: every step above
+  //    checks/mutates unit.cells directly (never s.corrosions membership), so
+  //    an emptied-but-not-yet-removed unit simply contributes zero cells to
+  //    any intermediate pass and is harmless until this final cleanup.
   s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
 }

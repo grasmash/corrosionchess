@@ -101,10 +101,47 @@ it('dormant unit is destroyed by same-square annihilation with a mover', () => {
   expect(s.corrosions).toEqual([]);
 });
 
+it('converged same-color units: first strikes, second survives on vacated square', () => {
+  const s = base();
+  s.board[fromAlg('d5', 8)] = { color: 'b', type: 'n' };
+  s.corrosions = [
+    unit({ id: 1, color: 'w', cells: [fromAlg('d4', 8)] }),
+    unit({ id: 2, color: 'w', cells: [fromAlg('d4', 8)] }),
+  ];
+  corrosionPhase(s);
+  expect(s.board[fromAlg('d5', 8)]).toBeNull();
+  expect(s.corrosions).toHaveLength(1);
+  // unit 1 (processed first) strikes the knight and is consumed; unit 2
+  // (processed second) then lands on the now-empty square and survives.
+  // A Map keyed by origin square would silently drop unit 1's move record
+  // and leave the WRONG unit (1, never struck at all) as the "survivor".
+  expect(s.corrosions[0].id).toBe(2);
+  expect(s.corrosions[0].cells).toEqual([fromAlg('d5', 8)]);
+});
+
+it('converged same-color units both die entering purple', () => {
+  const s = base();
+  s.purple = [fromAlg('d5', 8)];
+  s.corrosions = [
+    unit({ id: 1, color: 'w', cells: [fromAlg('d4', 8)] }),
+    unit({ id: 2, color: 'w', cells: [fromAlg('d4', 8)] }),
+  ];
+  corrosionPhase(s);
+  expect(s.corrosions).toEqual([]);
+});
+
 it('non-class-3 corrosion dies entering purple', () => {
   const s = base();
   s.purple = [fromAlg('d5', 8)];
   s.corrosions = [unit({ cells: [fromAlg('d4', 8)] })];
+  corrosionPhase(s);
+  expect(s.corrosions).toEqual([]);
+});
+
+it('purple deaths apply to dormant units too', () => {
+  const s = base();
+  s.purple = [fromAlg('d5', 8)];
+  s.corrosions = [unit({ cells: [fromAlg('d5', 8)], bornRound: s.round })];
   corrosionPhase(s);
   expect(s.corrosions).toEqual([]);
 });
