@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="art/mark.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#312e2b" />
+    <!-- iPadOS: launching from the home screen only goes edge-to-edge and
+         hides Safari's chrome with these three -- apple-touch-icon above
+         covers the home screen icon itself. `mobile-web-app-capable` is the
+         standardized tag Chromium wants; `apple-mobile-web-app-capable` is
+         kept alongside it since Safari/iOS still only honors the prefixed
+         one. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Corrosion" />
+    <title>Corrosion Chess</title>
+    <!-- Splash's hero background is the largest paint on first load; preload
+         it so it's not discovered only after main.ts's CSS import parses.
+         Relative (no leading slash) to match pieceImageUrl's subpath-deploy
+         convention (see piecesets.ts). -->
+    <link rel="preload" as="image" href="art/hero.png" />
+    <link rel="preload" as="image" href="art/hero-tall.png" media="(max-aspect-ratio: 1/1)" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- Plan 001: roughens corrosion-unit edges so the CSS blobs read as
+         corroded/acidic rather than smoothly rounded. Referenced via
+         `filter: url(#acid-goo)` in style.css; dropped there (with this left
+         in place, unused) if it tanks frame rate on the 12x12 board -- see
+         the plan's Step 3 fallback. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <filter id="acid-goo">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" />
+      </filter>
+    </svg>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

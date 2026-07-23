@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fire vs Ice piece preview</title>
+<style>
+  body { margin: 0; font-family: -apple-system, sans-serif; background: #1a1a1a; color: #eee; }
+  h2 { text-align: center; padding: 12px; margin: 0; }
+  .board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 16px; }
+  .cell { display: flex; flex-direction: column; align-items: center; padding: 8px; border-radius: 6px; }
+  .cell img { width: 100px; height: 100px; object-fit: contain; }
+  .cell span { font-size: 12px; margin-top: 4px; }
+  .dark { background: #312e2b; }
+  .green { background: #779556; }
+</style>
+</head>
+<body>
+  <h2>Dark background (#312e2b)</h2>
+  <div class="board dark" id="dark"></div>
+  <h2>Green background (#779556)</h2>
+  <div class="board green" id="green"></div>
+  <script>
+    const keys = ['wk','wq','wr','wb','wn','wp','bk','bq','br','bb','bn','bp'];
+    const labels = {wk:'White King',wq:'White Queen',wr:'White Rook',wb:'White Bishop',wn:'White Knight',wp:'White Pawn',
+                    bk:'Black King',bq:'Black Queen',br:'Black Rook',bb:'Black Bishop',bn:'Black Knight',bp:'Black Pawn'};
+    for (const id of ['dark','green']) {
+      const board = document.getElementById(id);
+      for (const k of keys) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = `<img src="${k}.png"><span>${labels[k]}</span>`;
+        board.appendChild(cell);
+      }
+    }
+  </script>
+</body>
+</html>

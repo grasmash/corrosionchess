@@ -1,0 +1,26 @@
+{
+  "name": "dessert",
+  "stylePhrase": "delicious candy-shop 3D game asset render, glossy glazed surface, soft studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated",
+  "sides": {
+    "w": {
+      "label": "vanilla & cream",
+      "palette": "glossy vanilla and cream frosting, pastel candy sprinkles, soft ivory shine, delicate piped icing detail"
+    },
+    "b": {
+      "label": "chocolate & fudge",
+      "palette": "rich dark chocolate and fudge, glossy chocolate drizzle, warm caramel accents, delicate piped icing detail"
+    }
+  },
+  "pieces": {
+    "k": "a {SIDE} confection monarch, richly piped with a candy-stick cross and crown collar",
+    "q": "a {SIDE} confection sovereign with a soft swirl coronet, more slender than the king, richly piped detail down the body",
+    "r": "a fluted {SIDE} pie-crust tower with a crimped rim, richly textured crust detail",
+    "b": "a dipped {SIDE} teardrop cone bishop on a pedestal base, drizzled with fine piped icing",
+    "n": "a {SIDE} confection steed head, richly decorated with piped icing mane detail",
+    "p": "a small {SIDE} bonbon on a cookie base, richly decorated with sprinkles and drizzle"
+  },
+  "promptOverrides": {
+    "bp": "single chess PAWN game piece, clearly recognizable classic chess pawn silhouette, the shortest piece on the board, a small solid dark chocolate bonbon, the round dome head and the entire tapered body below it are glossy solid dark chocolate all the way down, richly decorated with a drizzle of lighter caramel icing and scattered sprinkles only on the round cookie base at the very bottom, delicious candy-shop 3D game asset render, glossy glazed surface, soft studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text"
+  },
+  "notes": "wr (white rook) was produced via the flux-kontext-pro recolor escape hatch from the finished br shape (dark stone gothic/castle framing reliably grew a cross on the white side after 3 text-to-image attempts) -- if regenerating wr from scratch again and it grows a cross, recolor the passing br instead of rerolling text-to-image."
+}

@@ -1,0 +1,151 @@
+export interface PieceSet {
+  id: string;
+  label: string;
+  /** True only for the built-in cburnett set, which has no generated PNGs
+   * and needs no injected stylesheet -- see `applyPieceSet`. */
+  builtin?: boolean;
+}
+
+/**
+ * Only sets with a COMPLETE 12-PNG folder under `public/pieces/<id>/` belong
+ * here -- adding a new set is a one-line change once its folder is complete,
+ * but do not list one before then.
+ */
+export const PIECE_SETS: PieceSet[] = [
+  { id: 'classic', label: 'Classic', builtin: true },
+  { id: 'fireice', label: 'Ice vs Fire' },
+  { id: 'halloween', label: 'Halloween' },
+  { id: 'pets', label: 'Dogs vs Cats' },
+  { id: 'dessert', label: 'Dessert' },
+  { id: 'mythical', label: 'Mythical' },
+  { id: 'robots', label: 'Robots' },
+  { id: 'aliens', label: 'Aliens' },
+  { id: 'medieval', label: 'Medieval' },
+  { id: 'greek', label: 'Gods vs Titans' },
+  { id: 'dinosaurs', label: 'Dinosaurs' },
+  { id: 'christmas', label: 'Christmas' },
+];
+
+const STORAGE_KEY = 'pieceset';
+const STYLE_EL_ID = 'pieceset-style';
+/** Class the live board's mount root carries (added alongside `cg-wrap` in
+ * main.ts's buildGameLayout) so the injected override below only ever
+ * touches the real board -- NOT any other element that happens to reuse
+ * `cg-wrap` to read cburnett's own CSS, e.g. the settings modal's preview,
+ * which needs the true classic sprites regardless of which set is currently
+ * applied to the game. */
+const SCOPE_CLASS = 'pieceset-scope';
+
+/** role letter × color letter -> the cburnett-scheme class pair rendered by
+ * chessgroundx's util.js pieceClasses() (confirmed in pieces-cburnett.css):
+ * `.cg-wrap piece.<role>-piece.<color>`, roles p/n/b/r/q/k, colors
+ * white/black (full words, not w/b). */
+const ROLE_LETTERS = ['p', 'n', 'b', 'r', 'q', 'k'] as const;
+const COLORS: { letter: 'w' | 'b'; cssClass: 'white' | 'black' }[] = [
+  { letter: 'w', cssClass: 'white' },
+  { letter: 'b', cssClass: 'black' },
+];
+
+function isKnownSet(id: string): boolean {
+  return PIECE_SETS.some(s => s.id === id);
+}
+
+/** Reads the persisted piece-set id, falling back to `'classic'` if nothing
+ * is stored or the stored value doesn't match a known set (e.g. an old id
+ * from a since-removed set, or hand-edited localStorage). Also falls back to
+ * `'classic'` if `localStorage` throws (private-browsing/storage-disabled
+ * mode in some browsers) -- a boot-time throw here would kill `start()`
+ * before anything renders. */
+export function currentPieceSet(): string {
+  let stored: string | null;
+  try {
+    stored = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return 'classic';
+  }
+  return stored && isKnownSet(stored) ? stored : 'classic';
+}
+
+/** Persists the choice and immediately re-skins any mounted board. Swallows
+ * a persistence failure (see `currentPieceSet`) -- the in-memory re-skin via
+ * `applyPieceSet` still happens either way, it just won't survive a reload. */
+export function setPieceSet(id: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, id);
+  } catch {
+    /* storage unavailable -- re-skin still applies for this session */
+  }
+  applyPieceSet(id);
+}
+
+/** `pieces/<id>/<key>.png`, `key` being the two-letter color+role code (e.g.
+ * `wk`, `bp`) chessgroundx-style asset naming already uses. Relative (no
+ * leading slash) so it resolves under Vite's base path in both dev and a
+ * subpath-deployed build. */
+export function pieceImageUrl(id: string, key: string): string {
+  return `pieces/${id}/${key}.png`;
+}
+
+/**
+ * Fetches (creating if needed) the injected override `<style>` element and
+ * ALWAYS re-appends it to the very end of `<head>` -- `appendChild` on a
+ * node already in the document moves it rather than duplicating it. This is
+ * belt-and-suspenders against any DOM-order regression (e.g. a dev-server
+ * CSS hot-update strategy that removes-and-reinserts a stylesheet's `<style>`
+ * tag, landing it after ours): combined with the specificity bump on the
+ * rules themselves below, cascade order should never matter, but re-pinning
+ * this to the end on every call means it can't matter even if that
+ * assumption is ever wrong.
+ */
+function getOrCreateStyleEl(): HTMLStyleElement {
+  let el = document.getElementById(STYLE_EL_ID) as HTMLStyleElement | null;
+  if (!el) {
+    el = document.createElement('style');
+    el.id = STYLE_EL_ID;
+  }
+  document.head.appendChild(el);
+  return el;
+}
+
+/**
+ * Overrides the cburnett background-images with a generated set's PNGs by
+ * filling a single injected `<style>` element -- no cgboard/adapter changes
+ * needed since chessgroundx pieces are plain CSS backgrounds keyed by class.
+ * `'classic'` (or any unknown id) empties the style element, which falls
+ * back to pieces-cburnett.css's own rules.
+ *
+ * Selector is `.${SCOPE_CLASS}.cg-wrap piece...` (compound, no space) rather
+ * than just `.${SCOPE_CLASS} piece...` -- `pieceset-scope` and `cg-wrap` are
+ * two classes on the SAME board-mount element (see main.ts's
+ * buildGameLayout), so this is one extra class of specificity (0,4,1) over
+ * pieces-cburnett.css's own `.cg-wrap piece.<role>-piece.<color>` (0,3,1).
+ * Those two were previously EQUAL specificity, meaning whichever stylesheet
+ * happened to load/re-inject last in the DOM won the tie -- fragile under
+ * dev-server HMR churn. Specificity now decides it outright, independent of
+ * insertion order.
+ */
+export function applyPieceSet(id: string): void {
+  // No-op outside a browser (e.g. under vitest's DOM-free node environment,
+  // where setPieceSet's persistence logic is exercised without a real page)
+  // -- keeps this module importable/testable without a DOM shim.
+  if (typeof document === 'undefined') return;
+  const styleEl = getOrCreateStyleEl();
+  const set = PIECE_SETS.find(s => s.id === id);
+
+  if (!set || set.builtin) {
+    styleEl.textContent = '';
+    return;
+  }
+
+  const rules: string[] = [];
+  for (const role of ROLE_LETTERS) {
+    for (const { letter, cssClass } of COLORS) {
+      const key = `${letter}${role}`;
+      const url = pieceImageUrl(id, key);
+      rules.push(
+        `.${SCOPE_CLASS}.cg-wrap piece.${role}-piece.${cssClass} { background-image: url('${url}'); background-size: contain; }`
+      );
+    }
+  }
+  styleEl.textContent = rules.join('\n');
+}

@@ -1,0 +1,27 @@
+{
+  "name": "christmas",
+  "stylePhrase": "festive 3D game asset render, glossy glazed ornament surface, sparkling glitter accents, soft studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated",
+  "sides": {
+    "w": {
+      "label": "frost & silver",
+      "palette": "sparkling snow-white and silver, ice-blue ribbon and ornament accents, soft frost glitter, fine snowflake filigree"
+    },
+    "b": {
+      "label": "santa's red & evergreen",
+      "palette": "rich santa-red and evergreen green, gold trim and candy-cane stripe accents, warm gold glitter, holly berry filigree"
+    }
+  },
+  "pieces": {
+    "k": "a {SIDE} monarch in festive regalia",
+    "q": "a {SIDE} sovereign topped with a festive tree-star finial, more slender than the king",
+    "r": "a snow-capped {SIDE} brick castle tower decorated with a holly wreath",
+    "b": "a {SIDE} bishop with a candy-cane striped robe",
+    "n": "a {SIDE} reindeer-antlered steed head",
+    "p": "a small {SIDE} ornament-bauble pawn"
+  },
+  "promptOverrides": {
+    "br": "single chess ROOK game piece, clearly recognizable classic chess rook silhouette, a snow-capped brick castle tower with a flat top cut with square crenellation notches, the flat notched rim is the very top of the piece, directly above the notched rim is only empty plain gray background, nothing rises above the crenellations, a holly wreath with red berries and green leaves wraps around the shaft below the crenellated top, rich santa-red and evergreen green brick, gold trim, dusted with snow along the notches, festive 3D game asset render, glossy glazed ornament surface, sparkling glitter accents, soft studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text",
+    "wb": "a classic Staunton chess bishop piece exactly like a standard tournament chess set, the head is a single smooth solid ball-shaped bulb, one continuous unbroken sphere with no separate cup, no separate cap, and no second shape stacked underneath it, this single sphere sits directly on the slender waist of the piece, a single diagonal slit is carved into the side of the sphere near its top, a small soft tuft of fluffy white fur is nestled directly against the rounded apex of the sphere like a snowball topped with cotton fluff, the soft fur tuft has no rigid shape, no points, no symmetry, it is the highest part of the entire piece with only empty plain gray background above it, candy-cane red and white spiral stripes decorate the surface of the sphere below the fur tuft and continue down the slender waist and the wider base, sparkling snow-white and silver accents, ice-blue ribbon trim on the base, festive 3D game asset render, glossy glazed ornament surface, sparkling glitter accents, soft studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text",
+    "bb": "a classic Staunton chess bishop piece exactly like a standard tournament chess set, the head is a single smooth solid ball-shaped bulb, one continuous unbroken sphere with no separate cup, no separate cap, and no second shape stacked underneath it, this single sphere sits directly on the slender waist of the piece, a single diagonal slit is carved into the side of the sphere near its top, a small soft tuft of fluffy white fur is nestled directly against the rounded apex of the sphere like a santa-hat pom-pom, the soft fur tuft has no rigid shape, no points, no symmetry, it is the highest part of the entire piece with only empty plain gray background above it, candy-cane red and evergreen-green spiral stripes decorate the surface of the sphere below the fur tuft and continue down the slender waist and the wider base, rich santa-red and evergreen green with gold trim accents, warm gold glitter, holly berry filigree lower on the base, festive 3D game asset render, glossy glazed ornament surface, sparkling glitter accents, soft studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text"
+  }
+}
