@@ -96,3 +96,48 @@ it('kings-only draw fires even while corrosion units linger', () => {
   // don't stop the dead-position draw.
   expect(s.result).toEqual({ winner: null, reason: 'insufficient material' });
 });
+
+it('threefold repetition is a draw (knight shuffle)', () => {
+  let s = newGame(cfg);
+  const shuffle = [
+    ['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1'], ['f6', 'g8'],
+  ] as const;
+  // Start position count = 1; each full shuffle returns to it. After the
+  // second full shuffle the position has occurred 3 times -> draw.
+  for (const [a, b] of shuffle) s = applyMove(s, mv(s, a, b));
+  expect(s.result).toBeNull();
+  for (const [a, b] of shuffle) s = applyMove(s, mv(s, a, b));
+  expect(s.result).toEqual({ winner: null, reason: 'threefold repetition' });
+});
+
+it('repetition count distinguishes corrosion state (units make positions differ)', () => {
+  let s = newGame(cfg);
+  // Plant a dormant far-away corrosion unit; piece shuffle alone must NOT
+  // draw, because the unit marches each round -- positions never repeat.
+  s.corrosions = [{ id: 1, color: 'w', cls: 1, cells: [0], dir: 1, bornRound: 0 }];
+  const shuffle = [
+    ['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1'], ['f6', 'g8'],
+  ] as const;
+  for (const [a, b] of shuffle) s = applyMove(s, mv(s, a, b));
+  for (const [a, b] of shuffle) s = applyMove(s, mv(s, a, b));
+  expect(s.result).toBeNull();
+});
+
+it('100 quiet halfmoves is a draw by the 50-move rule', () => {
+  let s = newGame(cfg);
+  s.halfmoveClock = 99;
+  s = applyMove(s, mv(s, 'g1', 'f3')); // knight move: quiet, 100th halfmove
+  expect(s.result).toEqual({ winner: null, reason: '50-move rule' });
+});
+
+it('pawn moves and captures reset the halfmove clock', () => {
+  let s = newGame(cfg);
+  s.halfmoveClock = 42;
+  s = applyMove(s, mv(s, 'e2', 'e4'));
+  expect(s.halfmoveClock).toBe(0);
+  s.halfmoveClock = 42;
+  s = applyMove(s, mv(s, 'g8', 'f6'));
+  expect(s.halfmoveClock).toBe(43);
+  s = applyMove(s, mv(s, 'd2', 'd3'));
+  expect(s.halfmoveClock).toBe(0);
+});

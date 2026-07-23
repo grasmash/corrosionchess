@@ -98,5 +98,7 @@ export function initialState(config: Config): GameState {
     config,
     result: null,
     log: [],
+    halfmoveClock: 0,
+    positionCounts: {},
   };
 }

@@ -46,4 +46,13 @@ export interface GameState {
   config: Config;
   result: { winner: Color | null; reason: string } | null;
   log: LogEvent[];
+  /** Halfmoves since the last pawn move or material change (any capture, or
+   * a piece destroyed by corrosion). 100 (= 50 full moves) ends the game in
+   * a draw. Plain number so JSON round-trips (see tests/serialize.test.ts). */
+  halfmoveClock: number;
+  /** Occurrence count per position key (see positionKey in game.ts); 3 of a
+   * kind ends the game in a draw. Cleared whenever halfmoveClock resets --
+   * an irreversible move makes every earlier position unreachable, so the
+   * map stays small. Plain Record (not Map) so JSON round-trips. */
+  positionCounts: Record<string, number>;
 }
