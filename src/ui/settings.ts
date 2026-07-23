@@ -1,10 +1,12 @@
 import { PIECE_SETS, currentPieceSet, setPieceSet, pieceImageUrl } from './piecesets';
+import { BOARD_THEMES, currentBoardTheme, setBoardTheme } from './boardthemes';
+import type { BoardTheme } from './boardthemes';
 
 /** Back rank in file order, reused for both the preview's back-rank row and
  * to key generated-set filenames (b + role, e.g. `bp`, `bn`). */
 const BACK_RANK_ROLES = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'] as const;
 
-function buildPreviewRow(roles: readonly string[], setId: string, rowIndex: number): HTMLDivElement {
+function buildPreviewRow(roles: readonly string[], setId: string, rowIndex: number, theme: BoardTheme): HTMLDivElement {
   const row = document.createElement('div');
   row.className = 'settings-preview-row';
 
@@ -13,7 +15,13 @@ function buildPreviewRow(roles: readonly string[], setId: string, rowIndex: numb
 
   roles.forEach((role, colIndex) => {
     const square = document.createElement('div');
-    square.className = `settings-preview-square ${(rowIndex + colIndex) % 2 === 0 ? 'settings-preview-square--light' : 'settings-preview-square--dark'}`;
+    square.className = 'settings-preview-square';
+    // Inline (not the `--board-*` custom props) deliberately: the preview
+    // must reflect the in-modal, not-yet-saved board-theme selection, while
+    // the live board only re-skins on Save (see `setBoardTheme` below) --
+    // if this read the CSS vars instead, changing the dropdown pre-Save
+    // would re-skin the live board underneath the modal too.
+    square.style.backgroundColor = (rowIndex + colIndex) % 2 === 0 ? theme.light : theme.dark;
 
     if (isBuiltin) {
       // Reuses pieces-cburnett.css's own selectors (`.cg-wrap piece.<role>-
@@ -46,8 +54,8 @@ function buildPreviewRow(roles: readonly string[], setId: string, rowIndex: numb
  * so there's nothing to revert.
  */
 export function showSettings(onClose: () => void): void {
-  const initial = currentPieceSet();
-  let selected = initial;
+  let selectedPieceSet = currentPieceSet();
+  let selectedBoardTheme = currentBoardTheme();
 
   const overlay = document.createElement('div');
   overlay.className = 'promotion-modal-overlay';
@@ -66,34 +74,59 @@ export function showSettings(onClose: () => void): void {
 
   function renderPreview(): void {
     preview.innerHTML = '';
-    preview.appendChild(buildPreviewRow(BACK_RANK_ROLES, selected, 0));
-    preview.appendChild(buildPreviewRow(BACK_RANK_ROLES.map(() => 'p'), selected, 1));
+    const theme = BOARD_THEMES.find(t => t.id === selectedBoardTheme) ?? BOARD_THEMES[0];
+    preview.appendChild(buildPreviewRow(BACK_RANK_ROLES, selectedPieceSet, 0, theme));
+    preview.appendChild(buildPreviewRow(BACK_RANK_ROLES.map(() => 'p'), selectedPieceSet, 1, theme));
   }
   renderPreview();
 
-  const field = document.createElement('label');
-  field.className = 'settings-field';
-  field.htmlFor = 'settings-pieceset';
-  const fieldLabel = document.createElement('span');
-  fieldLabel.className = 'settings-field-label';
-  fieldLabel.textContent = 'Pieces';
-  const select = document.createElement('select');
-  select.className = 'settings-select';
-  select.id = 'settings-pieceset';
-  select.name = 'pieceset';
+  const pieceField = document.createElement('label');
+  pieceField.className = 'settings-field';
+  pieceField.htmlFor = 'settings-pieceset';
+  const pieceFieldLabel = document.createElement('span');
+  pieceFieldLabel.className = 'settings-field-label';
+  pieceFieldLabel.textContent = 'Pieces';
+  const pieceSelect = document.createElement('select');
+  pieceSelect.className = 'settings-select';
+  pieceSelect.id = 'settings-pieceset';
+  pieceSelect.name = 'pieceset';
   for (const set of PIECE_SETS) {
     const opt = document.createElement('option');
     opt.value = set.id;
     opt.textContent = set.label;
-    opt.selected = set.id === selected;
-    select.appendChild(opt);
+    opt.selected = set.id === selectedPieceSet;
+    pieceSelect.appendChild(opt);
   }
-  select.onchange = () => {
-    selected = select.value;
+  pieceSelect.onchange = () => {
+    selectedPieceSet = pieceSelect.value;
     renderPreview();
   };
-  field.append(fieldLabel, select);
-  modal.appendChild(field);
+  pieceField.append(pieceFieldLabel, pieceSelect);
+  modal.appendChild(pieceField);
+
+  const boardField = document.createElement('label');
+  boardField.className = 'settings-field';
+  boardField.htmlFor = 'settings-boardtheme';
+  const boardFieldLabel = document.createElement('span');
+  boardFieldLabel.className = 'settings-field-label';
+  boardFieldLabel.textContent = 'Board';
+  const boardSelect = document.createElement('select');
+  boardSelect.className = 'settings-select';
+  boardSelect.id = 'settings-boardtheme';
+  boardSelect.name = 'boardtheme';
+  for (const theme of BOARD_THEMES) {
+    const opt = document.createElement('option');
+    opt.value = theme.id;
+    opt.textContent = theme.label;
+    opt.selected = theme.id === selectedBoardTheme;
+    boardSelect.appendChild(opt);
+  }
+  boardSelect.onchange = () => {
+    selectedBoardTheme = boardSelect.value;
+    renderPreview();
+  };
+  boardField.append(boardFieldLabel, boardSelect);
+  modal.appendChild(boardField);
 
   const buttons = document.createElement('div');
   buttons.className = 'settings-buttons';
@@ -110,7 +143,8 @@ export function showSettings(onClose: () => void): void {
   saveBtn.className = 'btn btn-primary';
   saveBtn.textContent = 'Save';
   saveBtn.onclick = () => {
-    setPieceSet(selected);
+    setPieceSet(selectedPieceSet);
+    setBoardTheme(selectedBoardTheme);
     overlay.remove();
     onClose();
   };

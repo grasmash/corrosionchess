@@ -17,6 +17,7 @@ import type { NetStatus } from './ui/hud';
 import { showBotSelect } from './ui/botselect';
 import { showSplash } from './ui/splash';
 import { applyPieceSet, currentPieceSet } from './ui/piecesets';
+import { applyBoardTheme, currentBoardTheme } from './ui/boardthemes';
 import { copyText } from './ui/clipboard';
 import { newGame, applyMove } from './engine/game';
 import { legalMoves, inCheck } from './engine/legal';
@@ -788,9 +789,11 @@ function startBotGame(config: Config, persona: Persona): void {
   (window as unknown as { __cg: ReturnType<CgBoardView['api']> }).__cg = (view as unknown as CgBoardView).api();
 }
 
-// Apply the persisted piece set once, before any board mounts, so the very
-// first render already shows the right sprites instead of a cburnett flash.
+// Apply the persisted piece set and board theme once, before any board
+// mounts, so the very first render already shows the right sprites/colors
+// instead of a cburnett/green flash.
 applyPieceSet(currentPieceSet());
+applyBoardTheme(currentBoardTheme());
 start();
 
 // --- Dev-only tools: eyeball corrosion overlay rendering (marching,

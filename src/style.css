@@ -21,6 +21,13 @@
   --danger-text: #200604;
   --secondary: #454341;
   --secondary-shadow: #2b2a28;
+  /* Board theme (plan 005): set at runtime via boardthemes.ts's
+   * applyBoardTheme -- these three defaults are the 'green' theme, so the
+   * board looks identical before any JS runs / if applyBoardTheme is never
+   * called (e.g. under a test harness with no DOM). */
+  --board-light: #ebecd0;
+  --board-dark: #779556;
+  --board-lastmove: rgba(245, 246, 130, 0.5);
 }
 
 body {
@@ -186,22 +193,23 @@ h1 {
  * an 8-square grid with undersized pieces on the 12x12 board).
  */
 .board-wrap[data-size='8'] cg-board {
-  background-color: #ebecd0;
-  background-image: conic-gradient(#779556 90deg, #ebecd0 90deg 180deg, #779556 180deg 270deg, #ebecd0 270deg);
+  background-color: var(--board-light);
+  background-image: conic-gradient(var(--board-dark) 90deg, var(--board-light) 90deg 180deg, var(--board-dark) 180deg 270deg, var(--board-light) 270deg);
   background-size: calc(100% / 4) calc(100% / 4);
 }
 
 .board-wrap[data-size='12'] cg-board {
-  background-color: #ebecd0;
-  background-image: conic-gradient(#779556 90deg, #ebecd0 90deg 180deg, #779556 180deg 270deg, #ebecd0 270deg);
+  background-color: var(--board-light);
+  background-image: conic-gradient(var(--board-dark) 90deg, var(--board-light) 90deg 180deg, var(--board-dark) 180deg 270deg, var(--board-light) 270deg);
   background-size: calc(100% / 6) calc(100% / 6);
 }
 
 /* chessground.brown.css's move/last-move/selected highlights are tuned for
  * the brown palette; recolor them to the chess.com-style yellow-green so
- * they still read clearly against the new green board. */
+ * they still read clearly against the board (plan 005: --board-lastmove is
+ * themeable, see boardthemes.ts). */
 cg-board square.last-move {
-  background-color: rgba(245, 246, 130, 0.5);
+  background-color: var(--board-lastmove);
 }
 
 cg-board square.selected {
