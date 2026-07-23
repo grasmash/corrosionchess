@@ -1,0 +1,47 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 720px;
+}
+
+.board-wrap {
+  width: min(90vw, 640px);
+  height: min(90vw, 640px);
+  background: #333;
+}
+
+/*
+ * chessground.base.css hardcodes `cg-board square` and `piece` at
+ * width/height: 12.5% (i.e. it assumes an 8-file board). Piece *positions*
+ * are set via inline transform:translate(px,px) computed from the
+ * `dimensions` config (see chessgroundx/board.js), so those are fine at any
+ * size -- but the square/piece *size* CSS is not dimension-aware, so on a
+ * 12-wide board pieces render 1.5x too large and overlap. Override with the
+ * correct fraction based on the data-size attribute we set in cgboard.ts's
+ * mount(). This rule must be loaded after chessground.base.css (it is,
+ * because main.ts imports the chessgroundx CSS files before this file).
+ */
+.board-wrap[data-size='12'] cg-board square,
+.board-wrap[data-size='12'] piece {
+  width: calc(100% / 12);
+  height: calc(100% / 12);
+}
+
+#status {
+  font-size: 1.1rem;
+}
