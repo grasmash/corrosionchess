@@ -695,44 +695,51 @@ function startBotGame(config: Config, persona: Persona): void {
     if (Math.random() < 0.25) chatLog.push(pickQuip(persona, 'idle'));
     render();
 
-    const rng = Math.random;
-    const thinkFloor = 300 + rng() * 900;
-    const startedAt = Date.now();
-
-    // The compute IS the delay when it's slow (level 3 can take ~1s) --
-    // don't stack a fixed sleep on top of a slow compute. Only pad up to
-    // thinkFloor if the compute finished fast.
-    let move: Move;
-    try {
-      move = choosePersonaMove(state, persona, rng);
-    } catch (err) {
-      console.error('choosePersonaMove threw; falling back to chooseBotMove(level 1):', err);
-      move = chooseBotMove(state, 1, rng);
-    }
-    const remaining = Math.max(0, thinkFloor - (Date.now() - startedAt));
-
+    // Defer the actual computation to the next tick: choosePersonaMove runs
+    // synchronously and can block the main thread for ~1s at level 3, so if
+    // it ran in the same tick as the render() above, the browser would never
+    // get a chance to paint the "thinking" bubble before the freeze -- it'd
+    // look like the game hung instead of like the bot is thinking.
     setTimeout(() => {
-      const before = state;
-      let applied: Move = move;
-      let next: GameState;
+      const rng = Math.random;
+      const thinkFloor = 300 + rng() * 900;
+      const startedAt = Date.now();
+
+      // The compute IS the delay when it's slow (level 3 can take ~1s) --
+      // don't stack a fixed sleep on top of a slow compute. Only pad up to
+      // thinkFloor if the compute finished fast.
+      let move: Move;
       try {
-        next = applyMove(state, move);
+        move = choosePersonaMove(state, persona, rng);
       } catch (err) {
-        console.error('Persona produced an illegal move; falling back to chooseBotMove(level 1):', err);
-        try {
-          applied = chooseBotMove(state, 1, rng);
-          next = applyMove(state, applied);
-        } catch {
-          botThinking = false;
-          render();
-          return;
-        }
+        console.error('choosePersonaMove threw; falling back to chooseBotMove(level 1):', err);
+        move = chooseBotMove(state, 1, rng);
       }
-      state = next;
-      botThinking = false;
-      fireQuipsForMove(before, state, botColor, applied);
-      render();
-    }, remaining);
+      const remaining = Math.max(0, thinkFloor - (Date.now() - startedAt));
+
+      setTimeout(() => {
+        const before = state;
+        let applied: Move = move;
+        let next: GameState;
+        try {
+          next = applyMove(state, move);
+        } catch (err) {
+          console.error('Persona produced an illegal move; falling back to chooseBotMove(level 1):', err);
+          try {
+            applied = chooseBotMove(state, 1, rng);
+            next = applyMove(state, applied);
+          } catch {
+            botThinking = false;
+            render();
+            return;
+          }
+        }
+        state = next;
+        botThinking = false;
+        fireQuipsForMove(before, state, botColor, applied);
+        render();
+      }, remaining);
+    }, 0);
   }
 
   function applyHumanMove(move: Move): void {
