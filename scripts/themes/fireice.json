@@ -1,0 +1,22 @@
+{
+  "name": "fireice",
+  "stylePhrase": "stylized 3D game asset render, high detail, dramatic rim lighting, consistent top-left lighting",
+  "sides": {
+    "w": {
+      "label": "ice elemental",
+      "palette": "elegant translucent glacial ice crystal, pale blue and white frost palette, glowing icy blue core"
+    },
+    "b": {
+      "label": "fire elemental",
+      "palette": "molten obsidian and living flame, dark charcoal body with orange and red lava cracks"
+    }
+  },
+  "pieces": {
+    "k": "a regal {SIDE} monarch",
+    "q": "a graceful {SIDE} sovereign, more slender than the king",
+    "r": "a fortified {SIDE} tower",
+    "b": "a robed {SIDE} sage",
+    "n": "a fierce {SIDE} steed",
+    "p": "a small {SIDE} soldier"
+  }
+}
