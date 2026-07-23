@@ -147,7 +147,19 @@ function pieceGhostClass(p: Piece): string {
   return `corrosion-piece-ghost ${p.type}-piece ${p.color === 'w' ? 'white' : 'black'}`;
 }
 
-function spawnPieceGhost(unitsLayer: HTMLDivElement, piece: Piece, square: number, squarePx: SquarePx, board: DOMRect): void {
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Creates the piece-corrode ghost in its intact, PRE-destruction state: no
+ * filter, no cracks, just the piece's own sprite standing where the real
+ * piece used to be. Deliberately does NOT add `is-corroding` or schedule any
+ * removal -- the caller (killPieceOnSquare) decides when the destruction
+ * actually starts (immediately, or after the arriving corrosion blob's march
+ * finishes), matching the two-phase choreography design.
+ */
+function createIntactGhost(unitsLayer: HTMLDivElement, piece: Piece, square: number, squarePx: SquarePx, board: DOMRect): HTMLElement {
   const pos = squarePx(square);
   // Plain `<piece>` tag (not a custom element) so it picks up the exact same
   // `.cg-wrap piece.{type}-piece.{white|black}` background-image rules from
@@ -169,7 +181,7 @@ function spawnPieceGhost(unitsLayer: HTMLDivElement, piece: Piece, square: numbe
   // both apply. See the same reasoning on the unit divs below.
   el.style.translate = `${pos.x - board.left}px ${pos.y - board.top}px`;
   unitsLayer.appendChild(el);
-  autoRemove(el, 'animationend', 1400);
+  return el;
 }
 
 function spawnKillBurst(unitsLayer: HTMLDivElement, square: number, squarePx: SquarePx, board: DOMRect): void {
@@ -180,7 +192,60 @@ function spawnKillBurst(unitsLayer: HTMLDivElement, square: number, squarePx: Sq
   el.style.height = `${pos.w}px`;
   el.style.translate = `${pos.x - board.left}px ${pos.y - board.top}px`;
   unitsLayer.appendChild(el);
-  autoRemove(el, 'animationend', 900);
+  autoRemove(el, 'animationend', 1000);
+}
+
+/**
+ * Runs the full two-phase corrosion kill choreography for a piece vacated at
+ * `square`:
+ *
+ * - Phase A (only when `delayed` -- a corrosion cell just marched onto this
+ *   square this render, and reduced-motion isn't active): the ghost stands
+ *   fully intact for the same ~480ms the marching blob's `translate`
+ *   transition takes (see `.corrosion-unit.is-marching` in style.css) so the
+ *   piece visibly still "stands its ground" while the acid visibly arrives,
+ *   rather than dissolving at the same instant the blob is still sliding in.
+ *   A plain `setTimeout` (rather than chaining off the marching unit's own
+ *   `transitionend`) is used deliberately: under reduced motion the march
+ *   transition is removed entirely (see the `@media` split in style.css), so
+ *   `transitionend` would simply never fire there -- `prefersReducedMotion()`
+ *   lets this function skip the wait altogether in that case with one
+ *   code path instead of a transitionend-plus-fallback-timer dance.
+ * - Phase B (immediately if not `delayed` -- e.g. a corrosion cell spawned
+ *   directly onto an occupied square rather than marching there): the ghost
+ *   gets `is-corroding` (jolt/flash/crack/sink, see `piece-corrode` in
+ *   style.css), an enlarged kill-burst ring fires, and any unit div(s)
+ *   currently standing on the square get `is-feeding` (bubble surge).
+ */
+function killPieceOnSquare(
+  unitsLayer: HTMLDivElement,
+  piece: Piece,
+  square: number,
+  squarePx: SquarePx,
+  board: DOMRect,
+  delayed: boolean,
+  unitEntriesAt: () => HTMLDivElement[]
+): void {
+  const ghost = createIntactGhost(unitsLayer, piece, square, squarePx, board);
+
+  const startPhaseB = () => {
+    const reduced = prefersReducedMotion();
+    ghost.classList.add('is-corroding');
+    autoRemove(ghost, 'animationend', reduced ? 300 : 1700);
+    spawnKillBurst(unitsLayer, square, squarePx, board);
+    for (const unitEl of unitEntriesAt()) {
+      unitEl.classList.add('is-feeding');
+      autoRemoveClass(unitEl, 'is-feeding', 'animationend', reduced ? 300 : 1500);
+    }
+  };
+
+  if (delayed && !prefersReducedMotion()) {
+    // 480ms matches `.corrosion-unit.is-marching`'s `translate` transition
+    // duration in style.css -- keep these two in sync.
+    window.setTimeout(startPhaseB, 480);
+  } else {
+    startPhaseB();
+  }
 }
 
 // Persistent (unit id, cell index) -> div map, one per units-sublayer element
@@ -223,6 +288,12 @@ function renderUnits(
     }
   }
 
+  // Squares a corrosion cell actually marched onto (not spawned onto, not
+  // already there from a prior render) this render -- read below by the
+  // piece-destroy choreography to decide whether the kill needs to wait for
+  // the arriving blob (phase A) or can start destroying immediately.
+  const marchedToSquare = new Set<number>();
+
   // Spawn/march/update.
   for (const [key, { sq, color, cls }] of current) {
     const pos = squarePx(sq);
@@ -240,13 +311,19 @@ function renderUnits(
       map.set(key, entry);
     }
 
-    entry.el.className = unitVariantClass(color, cls);
+    // Donut/ring instead of a solid blob when a piece currently occupies
+    // this square (a friendly pass-through co-occupancy, e.g. corrosion
+    // spawning onto the capturing piece's own square) -- the raised
+    // opacities below would otherwise fully hide the piece under the blob.
+    const donut = gs.board[sq] != null ? ' corrosion-unit--donut' : '';
+    entry.el.className = unitVariantClass(color, cls) + donut;
     entry.el.style.width = `${size}px`;
     entry.el.style.height = `${size}px`;
 
     const moved = !isSpawn && entry.sq !== sq;
+    if (moved) marchedToSquare.add(sq);
     // Standalone `translate`, not the `transform` shorthand -- see the
-    // comment in spawnPieceGhost above. The idle `acid-pulse` keyframes
+    // comment in createIntactGhost above. The idle `acid-pulse` keyframes
     // animate the standalone `scale` property and `march-wobble` animates
     // the `transform` shorthand; all three are independent properties that
     // compose, so this position, the idle pulse, and the march wobble can
@@ -281,14 +358,9 @@ function renderUnits(
       const before = prev.board[sq];
       const after = gs.board[sq];
       if (before && !after && (prevCorrSquares.has(sq) || currCorrSquares.has(sq)) && !isEnPassantVacate(prev, gs, sq, before)) {
-        spawnPieceGhost(unitsLayer, before, sq, squarePx, board);
-        spawnKillBurst(unitsLayer, sq, squarePx, board);
-        for (const entry of map.values()) {
-          if (entry.sq === sq) {
-            entry.el.classList.add('is-feeding');
-            autoRemoveClass(entry.el, 'is-feeding', 'animationend', 1100);
-          }
-        }
+        killPieceOnSquare(unitsLayer, before, sq, squarePx, board, marchedToSquare.has(sq), () =>
+          [...map.values()].filter(entry => entry.sq === sq).map(entry => entry.el)
+        );
       }
     }
   }

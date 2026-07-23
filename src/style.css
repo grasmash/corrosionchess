@@ -278,27 +278,53 @@ cg-board square.selected {
 }
 
 .corrosion-unit--w {
+  --acid-color: var(--acid-w);
   background:
-    radial-gradient(circle at 35% 30%, rgb(var(--acid-w) / 0.85), transparent 65%),
-    radial-gradient(circle at 65% 70%, rgb(var(--acid-w) / 0.35), transparent 70%),
-    rgb(var(--acid-w) / 0.4);
-  box-shadow: 0 0 6px rgb(var(--acid-w) / 0.7);
+    radial-gradient(circle at 35% 30%, rgb(var(--acid-w) / 0.95), transparent 60%),
+    radial-gradient(circle at 65% 70%, rgb(var(--acid-w) / 0.6), transparent 70%),
+    rgb(var(--acid-w) / 0.85);
+  box-shadow: 0 0 10px rgb(var(--acid-w) / 0.9), 0 0 3px rgb(var(--acid-w) / 1);
 }
 
 .corrosion-unit--b {
+  --acid-color: var(--acid-b);
   background:
-    radial-gradient(circle at 35% 30%, rgb(var(--acid-b) / 0.85), transparent 65%),
-    radial-gradient(circle at 65% 70%, rgb(var(--acid-b) / 0.35), transparent 70%),
-    rgb(var(--acid-b) / 0.4);
-  box-shadow: 0 0 6px rgb(var(--acid-b) / 0.7);
+    radial-gradient(circle at 35% 30%, rgb(var(--acid-b) / 0.95), transparent 60%),
+    radial-gradient(circle at 65% 70%, rgb(var(--acid-b) / 0.6), transparent 70%),
+    rgb(var(--acid-b) / 0.85);
+  box-shadow: 0 0 10px rgb(var(--acid-b) / 0.9), 0 0 3px rgb(var(--acid-b) / 1);
 }
 
 .corrosion-unit--cls3 {
+  --acid-color: var(--acid-cls3);
   background:
-    radial-gradient(circle at 35% 30%, rgb(255 170 60 / 0.9), transparent 55%),
-    radial-gradient(circle at 65% 70%, rgb(var(--acid-cls3) / 0.55), transparent 70%),
-    rgb(var(--acid-cls3) / 0.45);
-  box-shadow: 0 0 8px rgb(var(--acid-cls3) / 0.85);
+    radial-gradient(circle at 35% 30%, rgb(255 170 60 / 0.95), transparent 55%),
+    radial-gradient(circle at 65% 70%, rgb(var(--acid-cls3) / 0.65), transparent 70%),
+    rgb(var(--acid-cls3) / 0.9);
+  box-shadow: 0 0 12px rgb(var(--acid-cls3) / 0.95), 0 0 4px rgb(var(--acid-cls3) / 1);
+}
+
+/* Donut/ring instead of a solid blob: applied (see overlays.ts) whenever a
+ * piece currently occupies the same square as this unit -- a friendly
+ * pass-through co-occupancy (e.g. corrosion spawning onto the square of the
+ * piece that just captured there) rather than corrosion having eaten
+ * anything. At the raised opacities above, a solid blob would fully hide the
+ * piece underneath it; hollowing out the center keeps the piece visible
+ * while the acid still reads as clearly present and dangerous around it.
+ * `--acid-color` is set per color/class variant above so this one rule
+ * covers all three without repeating the ring per variant. Higher
+ * specificity (two classes) than `.corrosion-unit--w/--b/--cls3` alone, so
+ * it wins regardless of source order. */
+.corrosion-unit.corrosion-unit--donut {
+  background: radial-gradient(
+    circle,
+    transparent 38%,
+    rgb(var(--acid-color) / 0.55) 48%,
+    rgb(var(--acid-color) / 0.92) 60%,
+    rgb(var(--acid-color) / 0.75) 78%,
+    transparent 92%
+  );
+  box-shadow: 0 0 10px rgb(var(--acid-color) / 0.85);
 }
 
 /* Rising bubbles. */
@@ -350,6 +376,12 @@ cg-board square.selected {
 
 /* --- Piece corrode-out ghost + kill burst. --- */
 
+/* Base state is deliberately inert (no filter, no animation) -- this is the
+ * "phase A" intact look: the piece appears to still be standing while the
+ * arriving corrosion blob is still mid-march. `is-corroding` (added by JS in
+ * overlays.ts's killPieceOnSquare, once phase A's wait -- if any -- is over)
+ * is what actually starts the jolt/flash/crack/sink sequence below; see the
+ * `@media` blocks for the animation itself. */
 .corrosion-piece-ghost {
   position: absolute;
   top: 0;
@@ -360,7 +392,8 @@ cg-board square.selected {
 
 /* Cracking phase (piece-corrode's middle third): jagged fracture slivers
  * fade in over the ghost, dark enough to read against any piece color via
- * multiply blending, then fade back out as the ghost dissolves. */
+ * multiply blending, then fade back out as the ghost dissolves. Only
+ * animates once `.is-corroding` is present -- see the note above. */
 .corrosion-piece-ghost::after {
   content: '';
   position: absolute;
@@ -372,13 +405,16 @@ cg-board square.selected {
   opacity: 0;
 }
 
+/* Enlarged/thickened per the "big" phase-B kill moment: a wider ring and a
+ * bigger final `kill-burst` expansion (see keyframes) read as a genuine
+ * impact rather than a small flicker. */
 .corrosion-kill-burst {
   position: absolute;
   top: 0;
   left: 0;
   border-radius: 50%;
   box-sizing: border-box;
-  border: 3px solid rgb(var(--acid-w) / 0.9);
+  border: 4px solid rgb(var(--acid-w) / 0.95);
   pointer-events: none;
 }
 
@@ -437,11 +473,13 @@ cg-board square.selected {
   }
 
   .corrosion-unit.is-feeding {
-    animation-duration: 1.4s, 8s;
+    /* Roughly matches the phase-B `piece-corrode` duration below so the
+     * bubble surge lasts as long as the kill itself is playing out. */
+    animation-duration: 1.5s, 8s;
   }
 
   .corrosion-unit.is-feeding::after {
-    animation-duration: 1.2s;
+    animation-duration: 1.3s;
   }
 
   .corrosion-unit.is-marching {
@@ -463,16 +501,22 @@ cg-board square.selected {
     animation: acid-dissolve 600ms ease-in forwards;
   }
 
-  .corrosion-piece-ghost {
-    animation: piece-corrode 1.2s ease-in forwards;
+  /* Phase B only: `is-corroding` isn't added until killPieceOnSquare decides
+   * phase A (if any) is over -- see the comment above `.corrosion-piece-ghost`
+   * and killPieceOnSquare in overlays.ts. 1.5s = jolt/flash (~0-16%) + purple
+   * shift/cracks (~16-45%) + sink/dissolve (45-100%); combined with phase A's
+   * 480ms wait this lands the full march-kill sequence in the ~1.8-2.2s
+   * range the choreography calls for. */
+  .corrosion-piece-ghost.is-corroding {
+    animation: piece-corrode 1.5s ease-in forwards;
   }
 
-  .corrosion-piece-ghost::after {
-    animation: piece-crack 1.2s ease-in forwards;
+  .corrosion-piece-ghost.is-corroding::after {
+    animation: piece-crack 1.5s ease-in forwards;
   }
 
   .corrosion-kill-burst {
-    animation: kill-burst 700ms ease-out forwards;
+    animation: kill-burst 900ms ease-out forwards;
   }
 
   .corrosion-purple-bg::after {
@@ -489,12 +533,17 @@ cg-board square.selected {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .corrosion-piece-ghost {
-    animation: piece-corrode 150ms ease-in forwards;
+  /* Deliberately a DIFFERENT keyframe (`piece-corrode-reduced`, no shake
+   * stops at all) rather than just a shorter duration of the full
+   * `piece-corrode` -- "shorten phase B, drop shake" per the choreography
+   * spec, and compressing the shake into a shorter duration would still be
+   * a (tiny, fast) shake, not the absence of one. */
+  .corrosion-piece-ghost.is-corroding {
+    animation: piece-corrode-reduced 150ms ease-in forwards;
   }
 
   .corrosion-kill-burst {
-    animation: kill-burst 150ms ease-out forwards;
+    animation: kill-burst 200ms ease-out forwards;
   }
 
   .corrosion-purple-bg.is-purpling {
@@ -585,7 +634,57 @@ cg-board square.selected {
   }
 }
 
+/* Phase B, full choreography (~1.5s): a rapid jolt/shake + bright flash as
+ * the kill lands (0-16%), settling into the purple corrode tint while cracks
+ * fade in (16-45%, see piece-crack below -- its timing was tuned for the
+ * previous 1.2s duration and still lines up here since both are percentage-
+ * based), then sinking/dissolving into the blob (45-100%). Mixing
+ * `translate(px, px)` (shake) and `translateY(%)` (sink) across keyframes is
+ * intentional -- browsers fall back to matrix decomposition when a
+ * keyframe's transform "shape" changes, which still animates smoothly here,
+ * just without guaranteed axis-linear interpolation, which doesn't matter
+ * for a shake-then-sink effect like this one. */
 @keyframes piece-corrode {
+  0% {
+    filter: sepia(0) hue-rotate(0deg) saturate(1) brightness(1) blur(0);
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  4% {
+    filter: sepia(0) hue-rotate(0deg) saturate(1) brightness(2.4) blur(0);
+    transform: translate(-6%, 3%) scale(1.03);
+    opacity: 1;
+  }
+  8% {
+    filter: sepia(0.4) hue-rotate(120deg) saturate(1.6) brightness(2) blur(0);
+    transform: translate(6%, -4%) scale(0.97);
+    opacity: 1;
+  }
+  12% {
+    filter: sepia(0.8) hue-rotate(200deg) saturate(2) brightness(1.4) blur(0);
+    transform: translate(-3%, 2%) scale(1.01);
+    opacity: 1;
+  }
+  16% {
+    filter: sepia(1) hue-rotate(230deg) saturate(2.2) brightness(0.9) blur(0);
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  45% {
+    filter: sepia(1) hue-rotate(230deg) saturate(2.2) brightness(0.8) blur(0);
+    transform: translateY(1%) scale(0.97);
+    opacity: 1;
+  }
+  100% {
+    filter: sepia(1) hue-rotate(230deg) saturate(2.2) brightness(0.55) blur(5px);
+    transform: translateY(14%) scale(0.65);
+    opacity: 0;
+  }
+}
+
+/* Reduced-motion phase B (150ms): the original 3-phase corrode with no jolt
+ * stops at all -- purpling, then sink/dissolve. */
+@keyframes piece-corrode-reduced {
   0% {
     filter: sepia(0) hue-rotate(0deg) saturate(1) brightness(1) blur(0);
     transform: translateY(0) scale(1);
@@ -622,14 +721,14 @@ cg-board square.selected {
 
 @keyframes kill-burst {
   0% {
-    box-shadow: 0 0 0 0 rgb(var(--acid-w) / 0.9);
+    box-shadow: 0 0 0 0 rgb(var(--acid-w) / 0.95), 0 0 20px 4px rgb(var(--acid-w) / 0.7);
     opacity: 1;
-    transform: scale(0.5);
+    transform: scale(0.4);
   }
   100% {
-    box-shadow: 0 0 0 10px rgb(var(--acid-w) / 0);
+    box-shadow: 0 0 0 18px rgb(var(--acid-w) / 0), 0 0 0 0 rgb(var(--acid-w) / 0);
     opacity: 0;
-    transform: scale(1.3);
+    transform: scale(1.6);
   }
 }
 
