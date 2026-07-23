@@ -429,6 +429,24 @@ function renderUnits(
   // most for.
   const marchedToSquare = new Set<number>();
 
+  // Squares where a corrosion unit was born FRESH this render (see the
+  // `isSpawn` check inside the per-cell loop below) -- read by the
+  // piece-destroy detection past this loop to recognize a specific
+  // false-positive: `engine/game.ts`'s `applyMove` always spawns a brand-new
+  // tier-1 unit at `m.from` (the CAPTURING piece's own origin square) on
+  // every capturing move, unconditionally -- so that square goes from
+  // "had a piece" (the mover, pre-move) to "empty" (gs.board, the mover
+  // walked away) in the exact same instant it gains its first-ever
+  // corrosion cell. That satisfies the naive "before && !after, square
+  // touched by corrosion" kill signature perfectly despite the mover being
+  // very much alive elsewhere on the board -- without this, every single
+  // capturing move played a false "piece destroyed by corrosion" ghost
+  // dissolve on the mover's own vacated square. A square that already had
+  // corrosion touching it BEFORE this render (`prevCorrSquares`) is still
+  // eligible for a real kill even if a cell there also happens to be
+  // freshly (re)spawned-looking this render -- see the check below.
+  const newlySpawnedSquares = new Set<number>();
+
   // Spawn/march/update, per unit -- matching this unit's OLD divs to its
   // CURRENT cells by expected position (see the WeakMap comment above)
   // rather than trusting array order to stay stable.
@@ -515,6 +533,7 @@ function renderUnits(
       // when it bounces off a board edge.
       entry.el.style.setProperty('--march-angle', `${marchAngleDeg(cellSq, u.dir, gs.size, squarePx)}deg`);
 
+      if (isSpawn) newlySpawnedSquares.add(cellSq);
       const moved = !isSpawn && entry.sq !== cellSq;
       if (moved) marchedToSquare.add(cellSq);
       // Standalone `translate`, not the `transform` shorthand -- see the
@@ -583,7 +602,17 @@ function renderUnits(
     for (let sq = 0; sq < size * size; sq++) {
       const before = prev.board[sq];
       const after = gs.board[sq];
-      if (before && !after && (prevCorrSquares.has(sq) || currCorrSquares.has(sq)) && !isEnPassantVacate(prev, gs, sq, before)) {
+      // A square whose ONLY corrosion is a unit born THIS render, with no
+      // corrosion touching it before -- always the mover's-own-origin
+      // false positive above, never a real kill (see newlySpawnedSquares).
+      const isFreshSpawnResidue = newlySpawnedSquares.has(sq) && !prevCorrSquares.has(sq);
+      if (
+        before &&
+        !after &&
+        (prevCorrSquares.has(sq) || currCorrSquares.has(sq)) &&
+        !isFreshSpawnResidue &&
+        !isEnPassantVacate(prev, gs, sq, before)
+      ) {
         killPieceOnSquare(unitsLayer, before, sq, squarePx, board, marchedToSquare.has(sq), () =>
           [...map.values()].flat().filter(entry => entry.sq === sq).map(entry => entry.el)
         );
