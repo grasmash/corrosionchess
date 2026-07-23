@@ -227,7 +227,7 @@ export function corrosionPhase(s: GameState): void {
     const edgeCell = leadCell(u, size);
     if (!s.config.tier3) {
       u.cells = [];
-      s.log.push({ round: s.round, text: 'Corrosion fizzles at the edge' });
+      s.log.push({ round: s.round, text: "Corrosion dissipates at the owner's edge" });
       continue;
     }
     u.cls = 3;

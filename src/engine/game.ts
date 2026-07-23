@@ -1,6 +1,6 @@
 import type { Color, Config, GameState, Move } from './types';
-import { initialState, forwardDir, toAlg, fileOf } from './board';
-import { applyMoveCore, inCheck, legalMoves } from './legal';
+import { initialState, forwardDir, toAlg } from './board';
+import { applyMoveCore, inCheck, isEnPassant, legalMoves } from './legal';
 import { corrosionPhase } from './corrosion';
 import { moveToSan } from './notation';
 
@@ -30,13 +30,10 @@ export function applyMove(prev: GameState, m: Move): GameState {
   const s = structuredClone(prev);
   const size = s.size;
 
-  const mover = s.board[m.from];
   const moverColor = s.turn;
 
   const destPiece = s.board[m.to];
-  const isEnPassant = !!mover && mover.type === 'p' && s.epSquare === m.to && !destPiece &&
-    fileOf(m.from, size) !== fileOf(m.to, size);
-  const wasPieceCapture = (!!destPiece && destPiece.color !== moverColor) || isEnPassant;
+  const wasPieceCapture = (!!destPiece && destPiece.color !== moverColor) || isEnPassant(s, m);
   const san = moveToSan(prev, m);
   const moveRound = prev.round;
 

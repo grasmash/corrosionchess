@@ -299,6 +299,10 @@ function startJoinGame(peerId: string, _urlConfig: Config): void {
   join(peerId, session => {
     clearTimeout(connectTimeout);
     session.onMessage(m => {
+      if (!isValidNetMsg(m)) {
+        console.warn('[net] ignoring malformed message:', m);
+        return;
+      }
       if (!mounted && m.type === 'init') {
         mounted = true;
         mountOnlineGame({
@@ -316,6 +320,54 @@ function startJoinGame(peerId: string, _urlConfig: Config): void {
       }
     });
   });
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function isColor(v: unknown): v is Color {
+  return v === 'w' || v === 'b';
+}
+
+function isWireMove(v: unknown): v is Move {
+  return isPlainObject(v) && typeof v.from === 'number' && typeof v.to === 'number' &&
+    (v.promotion === undefined || typeof v.promotion === 'string');
+}
+
+function isWireConfig(v: unknown): v is Config {
+  return isPlainObject(v) && typeof v.tier1 === 'boolean' && typeof v.tier2 === 'boolean' &&
+    typeof v.tier3 === 'boolean' && typeof v.bigBoard === 'boolean';
+}
+
+// Deliberately shallow -- just enough to keep a malformed/hostile peer from
+// crashing applyMove/render on missing fields. Not a full GameState schema
+// check (board contents, corrosions, etc. are trusted once these shape
+// checks pass).
+function isWireGameState(v: unknown): v is GameState {
+  return isPlainObject(v) && typeof v.size === 'number' && Array.isArray(v.board) &&
+    isColor(v.turn) && typeof v.round === 'number';
+}
+
+/** Validates a message off the wire before any code trusts its shape --
+ * `NetMsg` is a compile-time-only contract, but the actual bytes come from
+ * another peer (or a stale/incompatible client), so this is the runtime
+ * gate that keeps a malformed payload from reaching `applyMove`/render with
+ * `undefined` where a number or object was expected. */
+function isValidNetMsg(msg: unknown): msg is NetMsg {
+  if (!isPlainObject(msg) || typeof msg.type !== 'string') return false;
+  switch (msg.type) {
+    case 'init':
+      return isWireConfig(msg.config) && isWireGameState(msg.state) && isColor(msg.yourColor);
+    case 'move':
+      return typeof msg.seq === 'number' && isWireMove(msg.move);
+    case 'resync-request':
+      return true;
+    case 'resync':
+      return typeof msg.seq === 'number' && isWireGameState(msg.state);
+    default:
+      return false;
+  }
 }
 
 /**
@@ -542,6 +594,10 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
     });
     s.onMessage(msg => {
       if (session !== s) return;
+      if (!isValidNetMsg(msg)) {
+        console.warn('[net] ignoring malformed message:', msg);
+        return;
+      }
       handleIncoming(msg);
     });
     if (isHost) {

@@ -21,6 +21,19 @@ export function inCheck(s: GameState, color: Color): boolean {
   return isAttacked(s, kingSq, enemy);
 }
 
+/** True if `m` (played from the PRE-move `s`) is an en passant capture: a
+ * pawn moving diagonally onto the current ep square, which is only ever
+ * empty because the captured pawn sits beside it rather than on it. Shared
+ * by applyMoveCore, applyMove's capture-detection, and SAN generation so
+ * the file-change guard (a pawn simply can't move diagonally onto its own
+ * file) can't silently go missing from one of the three call sites again. */
+export function isEnPassant(s: GameState, m: Move): boolean {
+  const mover = s.board[m.from];
+  if (!mover || mover.type !== 'p') return false;
+  if (s.epSquare !== m.to || s.board[m.to]) return false;
+  return fileOf(m.from, s.size) !== fileOf(m.to, s.size);
+}
+
 // Resolve corrosion-capture landing on `to`. Returns true if the mover was
 // destroyed (and thus should not remain on the board).
 function resolveCorrosionCapture(s: GameState, to: number, moverColor: Color, moverIsKing: boolean): { destroyedMover: boolean; captured: boolean } {
@@ -64,13 +77,12 @@ export function applyMoveCore(s: GameState, m: Move): void {
   const isKing = mover.type === 'k';
   const isCastle = isKing && m.from === sq(4 + off, backRank, size) &&
     (m.to === sq(6 + off, backRank, size) || m.to === sq(2 + off, backRank, size));
-  const isEnPassant = mover.type === 'p' && s.epSquare === m.to && !s.board[m.to] &&
-    fileOf(m.from, size) !== fileOf(m.to, size);
+  const epCapture = isEnPassant(s, m);
   const isDoublePush = mover.type === 'p' && Math.abs(rankOf(m.to, size) - rankOf(m.from, size)) === 2;
 
   // capture removal (regular capture, if any) — do this before moving the piece
   // en passant capture: remove the pawn on the square behind `to`
-  if (isEnPassant) {
+  if (epCapture) {
     const dir = color === 'w' ? 1 : -1;
     const capturedSq = sq(fileOf(m.to, size), rankOf(m.to, size) - dir, size);
     s.board[capturedSq] = null;

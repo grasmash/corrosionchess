@@ -1,6 +1,6 @@
 import type { GameState, Move, Piece, PieceType } from './types';
 import { toAlg, fileOf, rankOf, FILES, offsetOf } from './board';
-import { legalMoves, applyMoveCore, inCheck } from './legal';
+import { legalMoves, applyMoveCore, inCheck, isEnPassant } from './legal';
 
 const PIECE_LETTERS: Record<PieceType, string> = { p: '', n: 'N', b: 'B', r: 'R', q: 'Q', k: 'K' };
 
@@ -39,8 +39,7 @@ export function moveToSan(pre: GameState, m: Move): string {
     san = fileOf(m.to, size) > fileOf(m.from, size) ? 'O-O' : 'O-O-O';
   } else {
     const destPiece = pre.board[m.to];
-    const isEnPassant = mover.type === 'p' && pre.epSquare === m.to && !destPiece;
-    const isCapture = (!!destPiece && destPiece.color !== mover.color) || isEnPassant;
+    const isCapture = (!!destPiece && destPiece.color !== mover.color) || isEnPassant(pre, m);
 
     if (mover.type === 'p') {
       san = isCapture

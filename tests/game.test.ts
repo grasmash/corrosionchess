@@ -42,6 +42,27 @@ it('fools mate produces checkmate result', () => {
   expect(s.result).toEqual({ winner: 'b', reason: 'checkmate' });
 });
 
+it('checkmate created by the corrosion phase ends the game immediately', () => {
+  let s = newGame(cfg);
+  s.board = s.board.map(() => null);
+  s.board[fromAlg('a1', 8)] = { color: 'w', type: 'k' };
+  s.board[fromAlg('a2', 8)] = { color: 'w', type: 'p' }; // shields the king from the rook
+  s.board[fromAlg('a8', 8)] = { color: 'b', type: 'r' }; // gives check once a2 is cleared
+  s.board[fromAlg('b8', 8)] = { color: 'b', type: 'q' }; // covers b1/b2 escape squares
+  s.board[fromAlg('h8', 8)] = { color: 'b', type: 'k' };
+  s.turn = 'b';
+  s.round = 5;
+  // A black cls-1 unit marching onto a2 this phase strikes the white pawn,
+  // opening the a-file check -- the move itself (h8-h7) captures nothing.
+  s.corrosions = [{ id: 1, color: 'b', cls: 1, cells: [fromAlg('a3', 8)], dir: -1, bornRound: 0 }];
+
+  s = applyMove(s, mv(s, 'h8', 'h7'));
+
+  expect(s.board[fromAlg('a2', 8)]).toBeNull();
+  expect(s.corrosions).toEqual([]);
+  expect(s.result).toEqual({ winner: 'b', reason: 'checkmate' });
+});
+
 it('round increments only after black moves', () => {
   let s = newGame(cfg);
   s = applyMove(s, mv(s, 'e2', 'e4'));
