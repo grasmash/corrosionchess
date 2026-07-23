@@ -1,4 +1,5 @@
 import type { Color, GameState, PieceType } from '../engine/types';
+import { copyText } from './clipboard';
 
 const PROMOTION_CHOICES: { type: PieceType; label: string }[] = [
   { type: 'q', label: 'Queen' },
@@ -41,40 +42,42 @@ export interface HudOptions {
   onNewGame?: () => void;
   /** Task 12: online games only -- omit entirely for hotseat. */
   netStatus?: NetStatus;
+  /** Chess.com-style redesign: hosts get a persistent "Copy invite link"
+   * action in the sidebar footer (not just on the pre-game wait screen), so
+   * they can re-share it if a guest needs to reconnect mid-game. */
+  isHost?: boolean;
+  inviteUrl?: string;
 }
 
 /**
  * Renders the (optional) net status line, turn indicator, last 8 log
- * events, and (when the game has ended) a result banner with a "New game"
- * button into `el`. Full redraw each call, matching the rest of the UI
- * layer's render-from-state pattern.
+ * events into the scrollable sidebar body, and a pinned action-row footer
+ * (New game; Copy invite link when hosting) into `el`. Full redraw each
+ * call, matching the rest of the UI layer's render-from-state pattern.
  */
 export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {}): void {
   el.innerHTML = '';
+
+  const body = document.createElement('div');
+  body.className = 'sidebar-body';
 
   if (opts.netStatus) {
     const net = document.createElement('div');
     net.className = `hud-net-status hud-net-status--${opts.netStatus}`;
     net.textContent = netStatusText(opts.netStatus);
-    el.appendChild(net);
+    body.appendChild(net);
   }
 
   const turn = document.createElement('div');
   turn.className = 'hud-turn';
   turn.textContent = gs.result ? resultText(gs) : turnText(gs, opts.youAre);
-  el.appendChild(turn);
+  body.appendChild(turn);
 
   if (gs.result) {
     const banner = document.createElement('div');
     banner.className = 'hud-result-banner';
     banner.textContent = resultText(gs);
-
-    const newGameBtn = document.createElement('button');
-    newGameBtn.textContent = 'New game';
-    newGameBtn.onclick = () => opts.onNewGame?.();
-
-    banner.appendChild(newGameBtn);
-    el.appendChild(banner);
+    body.appendChild(banner);
   }
 
   const log = document.createElement('div');
@@ -86,7 +89,39 @@ export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {})
     line.textContent = `#${entry.round} ${entry.text}`;
     log.appendChild(line);
   }
-  el.appendChild(log);
+  body.appendChild(log);
+  el.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'sidebar-actions';
+
+  const newGameBtn = document.createElement('button');
+  newGameBtn.className = 'btn btn-secondary';
+  newGameBtn.textContent = 'New game';
+  newGameBtn.onclick = () => opts.onNewGame?.();
+  actions.appendChild(newGameBtn);
+
+  if (opts.isHost && opts.inviteUrl) {
+    const inviteUrl = opts.inviteUrl;
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn btn-primary';
+    copyBtn.textContent = 'Copy invite link';
+    copyBtn.onclick = () => {
+      copyText(inviteUrl)
+        .then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy invite link';
+          }, 1500);
+        })
+        .catch(() => {
+          /* clipboard denied -- nothing else to fall back to from here */
+        });
+    };
+    actions.appendChild(copyBtn);
+  }
+
+  el.appendChild(actions);
 }
 
 /**
@@ -111,7 +146,7 @@ export function pickPromotion(color: Color): Promise<PieceType> {
 
     for (const { type, label } of PROMOTION_CHOICES) {
       const btn = document.createElement('button');
-      btn.className = `promotion-choice promotion-choice--${type}`;
+      btn.className = `btn btn-primary promotion-choice promotion-choice--${type}`;
       btn.textContent = label;
       btn.onclick = () => {
         overlay.remove();

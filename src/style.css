@@ -1,13 +1,19 @@
 :root {
   color-scheme: dark;
   font-family: system-ui, sans-serif;
-  --bg: #16181d;
-  --panel: #1f232b;
-  --border: #333944;
-  --text: #e7e6e2;
-  --text-dim: #9aa0ab;
-  --accent: #c9772f;
-  --accent-hover: #e08b3d;
+  --bg: #312e2b;
+  --panel: #262421;
+  --elevated: #3c3936;
+  --border: #46433f;
+  --text: #e8e6e3;
+  --text-dim: #989795;
+  --accent: #81b64c;
+  --accent-hover: #a3d160;
+  --accent-shadow: #5a8235;
+  --danger: #fa412d;
+  --danger-shadow: #b32c1e;
+  --secondary: #454341;
+  --secondary-shadow: #2b2a28;
 }
 
 body {
@@ -27,29 +33,68 @@ body {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  max-width: 960px;
+  max-width: 1040px;
 }
 
 h1 {
   margin: 0 0 0.25rem;
   letter-spacing: -0.01em;
+  font-weight: 700;
 }
 
-/* --- Task 13: board + sidebar layout --- */
+/* --- Game layout: board column (player bars + board) + sidebar card --- */
 
 .game-layout {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 1.25rem;
   width: 100%;
+}
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: min(90vw, 640px);
+  padding: 0.1rem 0.2rem;
+}
+
+.player-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.player-avatar--w {
+  background: linear-gradient(160deg, #e8e6e3, #b9b7b3);
+}
+
+.player-avatar--b {
+  background: linear-gradient(160deg, #4a4744, #26241f);
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
 }
 
 .board-wrap {
   width: min(90vw, 640px);
   height: min(90vw, 640px);
-  background: #333;
+  background: #262421;
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
@@ -124,22 +169,36 @@ h1 {
 
 /*
  * chessground.brown.css's `cg-board` background-image is a fixed embedded
- * SVG checker tile with viewBox="0 0 8 8" (8x8 squares), stretched via
- * `background-size: cover` to fill cg-board regardless of the board's actual
- * `dimensions`. On a 12x12 board this means the *background* still shows 8
- * squares per edge while pieces/square-highlights are correctly positioned
- * at 1/12 increments -- the board reads as an 8x8 grid with undersized
- * pieces. Replace the background for the 12x12 case with a real 12x12
- * checker generated from a single 2x2 conic-gradient tile repeated 6x6
- * (background-size: 100%/6 both axes). Colors match the 8x8 SVG's palette
- * exactly: light = its background-color (#f0d9b5); dark = that flattened
- * with the SVG's 20%-opacity black square (0.2*black + 0.8*#f0d9b5 =
- * #c0ae91), so the two board sizes read as the same theme.
+ * SVG checker tile with viewBox="0 0 8 8" (8x8 squares) in a brown palette,
+ * stretched via `background-size: cover` to fill cg-board regardless of the
+ * board's actual `dimensions`. Rather than rely on that asset at all, both
+ * board sizes get their checker pattern generated here from a single 2x2
+ * conic-gradient tile, repeated N/2 times per edge (N = board size) --
+ * that keeps the same green palette correctly scaled at any size instead of
+ * inheriting the brown SVG's fixed 8x8 tiling (which would otherwise read as
+ * an 8-square grid with undersized pieces on the 12x12 board).
  */
+.board-wrap[data-size='8'] cg-board {
+  background-color: #ebecd0;
+  background-image: conic-gradient(#779556 90deg, #ebecd0 90deg 180deg, #779556 180deg 270deg, #ebecd0 270deg);
+  background-size: calc(100% / 4) calc(100% / 4);
+}
+
 .board-wrap[data-size='12'] cg-board {
-  background-color: #f0d9b5;
-  background-image: conic-gradient(#c0ae91 90deg, #f0d9b5 90deg 180deg, #c0ae91 180deg 270deg, #f0d9b5 270deg);
+  background-color: #ebecd0;
+  background-image: conic-gradient(#779556 90deg, #ebecd0 90deg 180deg, #779556 180deg 270deg, #ebecd0 270deg);
   background-size: calc(100% / 6) calc(100% / 6);
+}
+
+/* chessground.brown.css's move/last-move/selected highlights are tuned for
+ * the brown palette; recolor them to the chess.com-style yellow-green so
+ * they still read clearly against the new green board. */
+cg-board square.last-move {
+  background-color: rgba(245, 246, 130, 0.5);
+}
+
+cg-board square.selected {
+  background-color: rgba(245, 246, 130, 0.35);
 }
 
 #status {
@@ -167,12 +226,24 @@ h1 {
   border: 1px solid rgba(0, 0, 0, 0.55);
 }
 
+/* White corrosion was originally a pale green (rgba(190,255,190,0.55)),
+ * which reads fine on the old brown board but nearly disappears against the
+ * new green (#779556/#ebecd0) squares -- green-on-green. Shifted toward
+ * silver/teal so it stays legible on both square colors while still reading
+ * as visually distinct from black corrosion's tint below. */
 .corrosion-cell--w {
-  background: rgba(190, 255, 190, 0.55);
+  background: rgba(180, 230, 230, 0.6);
 }
 
+/* Black corrosion was originally a dark green (rgba(20,90,20,0.55)), which
+ * had the same problem in the other direction from white's tint above: it's
+ * the same hue family as the new green board, so it reads as a faint
+ * darkening of the square rather than a distinct color -- worst on the dark
+ * green squares, where it nearly disappears. Shifted to a dark navy, well
+ * outside the board's green hue, so it reads as its own color on both
+ * square shades instead of "board, but shadowed". */
 .corrosion-cell--b {
-  background: rgba(20, 90, 20, 0.55);
+  background: rgba(30, 30, 48, 0.75);
 }
 
 .corrosion-cell--cls3 {
@@ -230,15 +301,21 @@ h1 {
 /* Generic button/input chrome so native form controls read as part of the
  * dark theme rather than the browser's light default widgets. */
 button {
-  background: var(--panel);
+  background: var(--elevated);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 5px;
+  font-family: inherit;
   cursor: pointer;
 }
 
 button:hover {
   border-color: var(--accent);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
 }
 
 input[type='text'] {
@@ -248,63 +325,202 @@ input[type='text'] {
   border-radius: 4px;
 }
 
-/* --- Task 11: setup screen, HUD, promotion modal --- */
-/* --- Task 13: card chrome + dark theme pass --- */
+/* --- Chess.com signature buttons: rounded, bold, solid fill with a darker
+ * bottom "edge" shadow that flattens on press. --- */
+.btn {
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  padding: 0.7rem 1.3rem;
+  cursor: pointer;
+  transition: transform 0.05s ease, box-shadow 0.05s ease, background-color 0.15s ease;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  box-shadow: 0 4px 0 var(--accent-shadow);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: transparent;
+}
+
+.btn-primary:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--accent-shadow);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  box-shadow: 0 4px 0 var(--secondary-shadow);
+}
+
+.btn-secondary:hover {
+  background: #514f4c;
+  border-color: transparent;
+}
+
+.btn-secondary:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--secondary-shadow);
+}
+
+.btn-danger {
+  background: var(--danger);
+  box-shadow: 0 4px 0 var(--danger-shadow);
+}
+
+.btn-danger:hover {
+  filter: brightness(1.08);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- Setup screen --- */
 
 .setup-screen {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  align-items: stretch;
+  gap: 1.25rem;
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 2rem 2.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 2rem 2.25rem 1.75rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.setup-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
 }
 
 .setup-form {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  align-self: stretch;
 }
 
-.setup-checkbox {
+.setup-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
-  padding: 0.15rem 0;
 }
 
-.setup-checkbox:has(input:disabled) {
-  opacity: 0.5;
+.setup-toggle:last-child {
+  border-bottom: none;
+}
+
+.setup-toggle-label {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.setup-toggle:has(input:disabled) .setup-toggle-label {
+  color: var(--text-dim);
+}
+
+.setup-toggle:has(input:disabled) {
   cursor: not-allowed;
+}
+
+/* Chess.com-style toggle switch: pill track, white knob, green when on.
+ * The real <input type="checkbox"> stays in the DOM (just visually hidden,
+ * not display:none) so it's still keyboard-focusable and announced by
+ * screen readers -- only the track/knob are decorative siblings. */
+.toggle-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 22px;
+}
+
+.toggle-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-switch input:disabled {
+  cursor: not-allowed;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: background-color 0.15s ease;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.toggle-switch input:checked ~ .toggle-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle-switch input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(18px);
+}
+
+.toggle-switch input:disabled ~ .toggle-track {
+  opacity: 0.5;
+}
+
+.toggle-switch input:focus-visible ~ .toggle-track {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
 }
 
 .setup-buttons {
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
+  margin-top: 0.25rem;
 }
 
-.setup-buttons button {
-  padding: 0.55rem 1.1rem;
-  font-size: 1rem;
+.setup-buttons .btn {
+  width: 100%;
 }
 
-.setup-buttons button:first-child {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #1a1200;
-  font-weight: 600;
-}
-
-.setup-buttons button:first-child:hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+.setup-rules-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-dim);
 }
 
 .join-placeholder {
@@ -313,26 +529,80 @@ input[type='text'] {
   align-items: center;
   gap: 1rem;
   text-align: center;
+  width: 100%;
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem 2.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
-#hud {
-  width: min(90vw, 640px);
-  max-width: 280px;
-  flex: 1 1 260px;
+/* --- Sidebar: header (title + config summary) + scrollable body/log +
+ * pinned action-row footer. Rendered as a single flex column so the footer
+ * (New game / Copy invite link) stays put while only the log scrolls. --- */
+
+.sidebar-panel {
+  width: min(90vw, 340px);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  align-self: stretch;
+}
+
+.sidebar-header {
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.sidebar-config {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.sidebar-hud {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-body {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem 1.1rem;
-  align-self: flex-start;
+  padding: 0.9rem 1.1rem;
+  overflow-y: auto;
 }
 
 .hud-turn {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text);
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-actions .btn {
+  flex: 1 1 0;
 }
 
 /* --- Task 12: online play (PeerJS) --- */
@@ -351,13 +621,13 @@ input[type='text'] {
 }
 
 .hud-net-status--open {
-  background: rgba(60, 190, 100, 0.18);
-  color: #5cd486;
+  background: rgba(129, 182, 76, 0.18);
+  color: var(--accent-hover);
 }
 
 .hud-net-status--closed {
-  background: rgba(220, 60, 60, 0.18);
-  color: #ec6363;
+  background: rgba(250, 65, 45, 0.18);
+  color: #ff8579;
 }
 
 .host-wait-screen {
@@ -367,6 +637,12 @@ input[type='text'] {
   gap: 1rem;
   text-align: center;
   width: 100%;
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem 2.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
 .host-wait-url-row {
@@ -387,8 +663,8 @@ input[type='text'] {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(201, 119, 47, 0.15);
-  border: 1px solid rgba(201, 119, 47, 0.5);
+  background: rgba(129, 182, 76, 0.15);
+  border: 1px solid rgba(129, 182, 76, 0.5);
   border-radius: 4px;
   padding: 0.5rem 0.75rem;
   font-weight: 600;
@@ -401,7 +677,8 @@ input[type='text'] {
   font-size: 0.8rem;
   font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
   color: var(--text-dim);
-  max-height: 12rem;
+  flex: 1 1 auto;
+  min-height: 3rem;
   overflow-y: auto;
   border-top: 1px solid var(--border);
   padding-top: 0.5rem;
@@ -410,6 +687,8 @@ input[type='text'] {
 .hud-log:empty {
   border-top: none;
   padding-top: 0;
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 .promotion-modal-overlay {
@@ -423,19 +702,20 @@ input[type='text'] {
 }
 
 .promotion-modal {
-  background: Canvas;
-  color: CanvasText;
-  border-radius: 8px;
-  padding: 1.25rem;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   align-items: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
 .promotion-modal-title {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .promotion-modal-choices {
@@ -444,6 +724,6 @@ input[type='text'] {
 }
 
 .promotion-choice {
-  padding: 0.5rem 0.9rem;
-  font-size: 1rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.95rem;
 }

@@ -10,10 +10,11 @@ import './style.css';
 import { createBoardView } from './ui/boardview';
 import type { CgBoardView } from './ui/cgboard';
 import { renderOverlays } from './ui/overlays';
-import { showSetup, encodeConfig, decodeConfig } from './ui/setup';
+import { showSetup, encodeConfig, decodeConfig, describeConfig } from './ui/setup';
 import type { SetupResult } from './ui/setup';
 import { renderHud, pickPromotion } from './ui/hud';
 import type { NetStatus } from './ui/hud';
+import { copyText } from './ui/clipboard';
 import { newGame, applyMove } from './engine/game';
 import { legalMoves } from './engine/legal';
 import { corrosionPhase } from './engine/corrosion';
@@ -93,42 +94,19 @@ function showJoinError(message: string): void {
   wrap.className = 'join-placeholder';
 
   const title = document.createElement('h1');
+  title.className = 'setup-title';
   title.textContent = 'Corrosion Chess';
 
   const msg = document.createElement('p');
   msg.textContent = message;
 
   const backBtn = document.createElement('button');
+  backBtn.className = 'btn btn-secondary';
   backBtn.textContent = 'Back to setup';
   backBtn.onclick = backToSetup;
 
   wrap.append(title, msg, backBtn);
   appEl.appendChild(wrap);
-}
-
-/** Clipboard write with a `document.execCommand` fallback for contexts
- * (older browsers, non-secure origins) where the async Clipboard API isn't
- * available. */
-function copyText(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    return navigator.clipboard.writeText(text);
-  }
-  return new Promise((resolve, reject) => {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand('copy');
-      resolve();
-    } catch (e) {
-      reject(e);
-    } finally {
-      ta.remove();
-    }
-  });
 }
 
 /** Host flow: create a Peer, show the share URL + "waiting for opponent"
@@ -142,6 +120,7 @@ function startHostGame(config: Config): void {
   wrap.className = 'host-wait-screen';
 
   const title = document.createElement('h1');
+  title.className = 'setup-title';
   title.textContent = 'Corrosion Chess';
 
   const status = document.createElement('p');
@@ -156,6 +135,7 @@ function startHostGame(config: Config): void {
   urlInput.setAttribute('aria-label', 'Game join link');
   urlInput.readOnly = true;
   const copyBtn = document.createElement('button');
+  copyBtn.className = 'btn btn-primary';
   copyBtn.textContent = 'Copy link';
   copyBtn.disabled = true;
   copyBtn.onclick = () => {
@@ -173,6 +153,7 @@ function startHostGame(config: Config): void {
   urlRow.append(urlInput, copyBtn);
 
   const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-secondary';
   cancelBtn.textContent = 'Cancel';
   cancelBtn.onclick = backToSetup;
 
@@ -188,12 +169,16 @@ function startHostGame(config: Config): void {
   }, 8000);
 
   let rewireSession: ((s: Session) => void) | null = null;
+  // Hoisted so the second `host()` callback (fired once a guest connects,
+  // which can happen well after the first) can also reach it -- e.g. to
+  // hand it to the in-game sidebar's "Copy invite link" action.
+  let inviteUrl: string | undefined;
 
   host(
     peerId => {
       clearTimeout(readyTimeout);
-      const url = `${window.location.origin}${window.location.pathname}#join=${peerId}&cfg=${encodeConfig(config)}`;
-      urlInput.value = url;
+      inviteUrl = `${window.location.origin}${window.location.pathname}#join=${peerId}&cfg=${encodeConfig(config)}`;
+      urlInput.value = inviteUrl;
       copyBtn.disabled = false;
       status.textContent = 'Waiting for opponent…';
     },
@@ -205,6 +190,7 @@ function startHostGame(config: Config): void {
           config,
           initialState: newGame(config),
           session,
+          inviteUrl,
         });
       } else {
         rewireSession(session);
@@ -285,6 +271,81 @@ interface OnlineGameParams {
   isHost: boolean;
   initialState: GameState;
   session: Session;
+  /** Set once the PeerJS broker assigns the host's peer ID; threaded through
+   * to the sidebar's "Copy invite link" action so the host can re-share it
+   * mid-game (e.g. if a guest needs to reconnect). Absent for the guest. */
+  inviteUrl?: string;
+}
+
+function colorLabel(c: Color): string {
+  return c === 'w' ? 'White' : 'Black';
+}
+
+interface GameLayoutParts {
+  boardEl: HTMLDivElement;
+  hudEl: HTMLDivElement;
+  topBar: HTMLDivElement;
+  bottomBar: HTMLDivElement;
+}
+
+/** Builds the chess.com-style game screen shared by hotseat and online play:
+ * a board column (opponent bar / board / self bar) plus a sidebar card
+ * (title + config summary header, then the `#hud` mount point the caller
+ * fills in via `renderHud`). Player-bar contents are set separately with
+ * `renderPlayerBar` since hotseat's bars are static while online's flip
+ * with `youAre`. */
+function buildGameLayout(config: Config): GameLayoutParts {
+  appEl.innerHTML = '';
+  const layout = document.createElement('div');
+  layout.className = 'game-layout';
+
+  const boardColumn = document.createElement('div');
+  boardColumn.className = 'board-column';
+
+  const topBar = document.createElement('div');
+  topBar.className = 'player-bar player-bar--top';
+
+  const boardEl = document.createElement('div');
+  boardEl.className = 'board-wrap';
+  boardEl.id = 'board';
+
+  const bottomBar = document.createElement('div');
+  bottomBar.className = 'player-bar player-bar--bottom';
+
+  boardColumn.append(topBar, boardEl, bottomBar);
+
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'sidebar-panel';
+
+  const header = document.createElement('div');
+  header.className = 'sidebar-header';
+  const sidebarTitle = document.createElement('div');
+  sidebarTitle.className = 'sidebar-title';
+  sidebarTitle.textContent = 'Corrosion Chess';
+  const sidebarConfig = document.createElement('div');
+  sidebarConfig.className = 'sidebar-config';
+  sidebarConfig.textContent = describeConfig(config);
+  header.append(sidebarTitle, sidebarConfig);
+
+  const hudEl = document.createElement('div');
+  hudEl.id = 'hud';
+  hudEl.className = 'sidebar-hud';
+
+  sidebar.append(header, hudEl);
+  layout.append(boardColumn, sidebar);
+  appEl.appendChild(layout);
+
+  return { boardEl, hudEl, topBar, bottomBar };
+}
+
+function renderPlayerBar(el: HTMLDivElement, color: Color, label: string): void {
+  el.innerHTML = '';
+  const avatar = document.createElement('span');
+  avatar.className = `player-avatar player-avatar--${color}`;
+  const name = document.createElement('span');
+  name.className = 'player-name';
+  name.textContent = label;
+  el.append(avatar, name);
 }
 
 /**
@@ -310,16 +371,10 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
   let ply = plyFromState(state);
   let netStatus: NetStatus = 'connecting';
 
-  appEl.innerHTML = '';
-  const layout = document.createElement('div');
-  layout.className = 'game-layout';
-  const boardEl = document.createElement('div');
-  boardEl.className = 'board-wrap';
-  boardEl.id = 'board';
-  const hudEl = document.createElement('div');
-  hudEl.id = 'hud';
-  layout.append(boardEl, hudEl);
-  appEl.appendChild(layout);
+  const { boardEl, hudEl, topBar, bottomBar } = buildGameLayout(config);
+  const opponent: Color = youAre === 'w' ? 'b' : 'w';
+  renderPlayerBar(topBar, opponent, colorLabel(opponent));
+  renderPlayerBar(bottomBar, youAre, `You (${colorLabel(youAre)})`);
 
   const view = createBoardView(state.size);
   view.mount(boardEl);
@@ -329,7 +384,13 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
     const canMove = !state.result && state.turn === youAre && netStatus === 'open';
     view.setState(state, canMove ? computeDests(state) : new Map());
     renderOverlays(boardEl, view, state);
-    renderHud(hudEl, state, { youAre, netStatus, onNewGame: backToSetup });
+    renderHud(hudEl, state, {
+      youAre,
+      netStatus,
+      onNewGame: backToSetup,
+      isHost: params.isHost,
+      inviteUrl: params.inviteUrl,
+    });
   }
 
   function sendResyncFromHost(): void {
@@ -459,16 +520,9 @@ function startGame(setup: SetupResult): void {
   // 'join' is intercepted by start() before showSetup() ever runs.
   let state: GameState = newGame(setup.config);
 
-  appEl.innerHTML = '';
-  const layout = document.createElement('div');
-  layout.className = 'game-layout';
-  const boardEl = document.createElement('div');
-  boardEl.className = 'board-wrap';
-  boardEl.id = 'board';
-  const hudEl = document.createElement('div');
-  hudEl.id = 'hud';
-  layout.append(boardEl, hudEl);
-  appEl.appendChild(layout);
+  const { boardEl, hudEl, topBar, bottomBar } = buildGameLayout(setup.config);
+  renderPlayerBar(topBar, 'b', colorLabel('b'));
+  renderPlayerBar(bottomBar, 'w', colorLabel('w'));
 
   const view = createBoardView(state.size);
   view.mount(boardEl);

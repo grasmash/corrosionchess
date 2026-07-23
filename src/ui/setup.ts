@@ -26,6 +26,16 @@ export function decodeConfig(s: string): Config {
   };
 }
 
+/** Short "Tiers 1-3 · 12×12"-style summary shown in the in-game sidebar
+ * header, so players can see what variant they're mid-game in without
+ * digging through the log. */
+export function describeConfig(c: Config): string {
+  const highestTier = c.tier3 ? 3 : c.tier2 ? 2 : c.tier1 ? 1 : 0;
+  const tierText = highestTier === 0 ? 'No corrosion' : highestTier === 1 ? 'Tier 1' : `Tiers 1-${highestTier}`;
+  const boardText = c.bigBoard ? '12×12' : '8×8';
+  return `${tierText} · ${boardText}`;
+}
+
 /**
  * Renders the setup screen into `#app` and invokes `onStart` once the user
  * picks a mode. Enforces the tier dependency chain (tier N requires tier
@@ -40,27 +50,42 @@ export function showSetup(onStart: (r: SetupResult) => void): void {
   wrap.className = 'setup-screen';
 
   const title = document.createElement('h1');
+  title.className = 'setup-title';
   title.textContent = 'Corrosion Chess';
   wrap.appendChild(title);
 
   const form = document.createElement('div');
   form.className = 'setup-form';
 
-  function makeCheckbox(id: string, label: string): { row: HTMLLabelElement; input: HTMLInputElement } {
+  function makeToggle(id: string, label: string): { row: HTMLLabelElement; input: HTMLInputElement } {
     const row = document.createElement('label');
-    row.className = 'setup-checkbox';
+    row.className = 'setup-toggle';
+    row.htmlFor = id;
+
+    const text = document.createElement('span');
+    text.className = 'setup-toggle-label';
+    text.textContent = label;
+
+    const switchEl = document.createElement('span');
+    switchEl.className = 'toggle-switch';
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.id = id;
-    row.appendChild(input);
-    row.append(` ${label}`);
+    const track = document.createElement('span');
+    track.className = 'toggle-track';
+    const thumb = document.createElement('span');
+    thumb.className = 'toggle-thumb';
+    track.appendChild(thumb);
+    switchEl.append(input, track);
+
+    row.append(text, switchEl);
     return { row, input };
   }
 
-  const tier1 = makeCheckbox('tier1', 'Tier 1 corrosion (spawns on capture)');
-  const tier2 = makeCheckbox('tier2', 'Tier 2 corrosion');
-  const tier3 = makeCheckbox('tier3', 'Tier 3 corrosion');
-  const bigBoard = makeCheckbox('bigBoard', 'Enlarged board (12x12)');
+  const tier1 = makeToggle('tier1', 'Tier 1 corrosion (spawns on capture)');
+  const tier2 = makeToggle('tier2', 'Tier 2 corrosion');
+  const tier3 = makeToggle('tier3', 'Tier 3 corrosion');
+  const bigBoard = makeToggle('bigBoard', 'Enlarged board (12x12)');
 
   // Dependency chain: tier N requires tier N-1. Enforce in the change
   // handlers (not just via a one-time `disabled` computed at render time)
@@ -94,15 +119,22 @@ export function showSetup(onStart: (r: SetupResult) => void): void {
   }
 
   const hotseatBtn = document.createElement('button');
-  hotseatBtn.textContent = 'Play hotseat';
+  hotseatBtn.className = 'btn btn-primary';
+  hotseatBtn.textContent = 'Play Hotseat';
   hotseatBtn.onclick = () => onStart({ config: currentConfig(), mode: 'hotseat' });
 
   const onlineBtn = document.createElement('button');
-  onlineBtn.textContent = 'Create online game';
+  onlineBtn.className = 'btn btn-secondary';
+  onlineBtn.textContent = 'Create Online Game';
   onlineBtn.onclick = () => onStart({ config: currentConfig(), mode: 'host' });
 
   buttons.append(hotseatBtn, onlineBtn);
   wrap.appendChild(buttons);
+
+  const rulesHint = document.createElement('p');
+  rulesHint.className = 'setup-rules-hint';
+  rulesHint.textContent = 'Corrosion spawns on capture and marches every round — see the README for full rules.';
+  wrap.appendChild(rulesHint);
 
   el.appendChild(wrap);
 }
