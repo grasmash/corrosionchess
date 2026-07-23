@@ -51,6 +51,11 @@ File convention consumed by the app: `public/pieces/<theme>/{wk,wq,wr,wb,wn,wp,b
    cross finial above the crenellations). If positive flat-top phrasing fails
    twice, change the FRAMING, not the wording — e.g. "dark stone gothic
    tower" → "cozy painted brick tower" fixed it immediately.
-7. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
+7. **Escape hatch for prompt-resistant pieces:** if a piece still fails after
+   the retry cap, stop rerolling text-to-image. Take the same piece from the
+   OTHER side (which passed) and recolor it into the failing side's palette
+   with `flux-kontext-pro` (image editing) — shape stays correct, only the
+   palette changes. Verified fix (fireice black bishop after 4 failed rolls).
+8. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
    renders a plain classic piece — check that the theme actually appears on
    every piece, not just that the silhouette is right.
