@@ -41,8 +41,28 @@ and UI.
 | addie | Addie| 700  | likes to talk about dolls | L2, blunderChance 0.10, evalNoise ±0.5 |
 | theo  | Theo | 1300 | likes gaming and treats | L3, blunderChance 0.03 |
 
-Ratings top out around 2000 in this game's scale (user note) — leave room but
-build only these six.
+Ratings top out around 2000 in this game's scale (user note).
+
+**The Bob army (user-specified):** every other bot in the roster is named
+Bob. Fill the roster out chess.com-style with 8 Bobs at ratings
+150, 400, 600, 800, 1000, 1200, 1500, 2000 — ids `bob150`…`bob2000`, all
+displayed simply as "Bob". Strength via a shared helper
+`paramsForRating(rating): { level, blunderChance }` (piecewise: ≤200 → L1;
+201–900 → L2 with blunderChance sliding 0.4→0.05; >900 → L3 with
+blunderChance sliding 0.05→0). Bobs share one deadpan quip pool (identical
+personality is the joke — "I'm Bob.", "Bob move.", etc.); write ~8 lines
+covering all QuipEvents, reused across all Bobs.
+
+**Joe (user-specified):** exactly one bot named Joe, rating 550
+(`paramsForRating(550)`), whose personality is that he is emphatically not
+Bob ("There are so many Bobs.", "It's Joe. JOE.").
+
+Selection screen grouping: "Family & Pets" section (the six above, in rating
+order), then "The Bobs" section (8 Bobs ascending + Joe inserted at his
+rating position between bob400 and bob600, visually identical cards except
+the name/rating). Use `paramsForRating` for the six family bots' table values
+too where they coincide — but keep their table-specified overrides (Bella's
+opening book, Toby's L1) exactly as specified.
 
 Bella's opening book (as Black or White): each turn, if one of these moves is
 legal, play it with 85% probability, in order of preference: as White
