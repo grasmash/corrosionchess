@@ -18,5 +18,8 @@
     "b": "a cloaked {SIDE} friar in a hooded robe",
     "n": "an armored {SIDE} warhorse in barding, mounted knight",
     "p": "a small {SIDE} squire wearing a simple helm"
+  },
+  "promptOverrides": {
+    "wq": "single chess QUEEN game piece, clearly recognizable classic chess queen silhouette, an armored silver order monarch's consort, more slender than the king, wearing a thin plain silver circlet band around her brow with no points and nothing rising above it, a soft flowing embroidered royal-blue veil of cloth drapes back and down from the circlet over the head like hair, the veil is soft and non-rigid with gentle folds, the rounded top of the draped veil is the highest part of the entire piece, directly above the veil is only empty plain gray background, a small gold filigree brooch pins the veil at the brow, shining polished silver plate armor below, royal blue heraldic cloth trim, gold filigree accents, painterly medieval 3D game asset render, weathered metal and cloth textures, dramatic rim lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text"
   }
 }
