@@ -42,6 +42,26 @@ body {
   height: calc(100% / 12);
 }
 
+/*
+ * chessground.brown.css's `cg-board` background-image is a fixed embedded
+ * SVG checker tile with viewBox="0 0 8 8" (8x8 squares), stretched via
+ * `background-size: cover` to fill cg-board regardless of the board's actual
+ * `dimensions`. On a 12x12 board this means the *background* still shows 8
+ * squares per edge while pieces/square-highlights are correctly positioned
+ * at 1/12 increments -- the board reads as an 8x8 grid with undersized
+ * pieces. Replace the background for the 12x12 case with a real 12x12
+ * checker generated from a single 2x2 conic-gradient tile repeated 6x6
+ * (background-size: 100%/6 both axes). Colors match the 8x8 SVG's palette
+ * exactly: light = its background-color (#f0d9b5); dark = that flattened
+ * with the SVG's 20%-opacity black square (0.2*black + 0.8*#f0d9b5 =
+ * #c0ae91), so the two board sizes read as the same theme.
+ */
+.board-wrap[data-size='12'] cg-board {
+  background-color: #f0d9b5;
+  background-image: conic-gradient(#c0ae91 90deg, #f0d9b5 90deg 180deg, #c0ae91 180deg 270deg, #f0d9b5 270deg);
+  background-size: calc(100% / 6) calc(100% / 6);
+}
+
 #status {
   font-size: 1.1rem;
 }
