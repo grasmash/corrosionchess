@@ -45,12 +45,28 @@ function badgeEl(text: string, corner: 'tl' | 'tr' | 'bl' | 'br'): HTMLDivElemen
   return el;
 }
 
-/** One "half" (or full square, when it's the only bucket) of a corrosion tint. */
-function bucketEl(b: Bucket, index: number, total: number): HTMLDivElement {
+/**
+ * One "half" (or full square, when it's the only bucket) of a corrosion tint.
+ *
+ * `inset`: true when the square is *also* purple (e.g. a class-3 unit
+ * standing on a square it, or another class-3 unit, already painted purple
+ * earlier -- purple is immune-exempt for cls3, so this is a normal, reachable
+ * board state, not just a defensive edge case). Shrinking the tint leaves a
+ * visible ring of the purple base tint around it so both are legible at
+ * once, rather than the corrosion color fully overpainting the purple.
+ */
+function bucketEl(b: Bucket, index: number, total: number, inset: boolean): HTMLDivElement {
   const half = document.createElement('div');
   half.className = `corrosion-cell corrosion-cell--${b.cls3 ? 'cls3' : b.color}`;
-  half.style.left = `${(100 / total) * index}%`;
-  half.style.width = `${100 / total}%`;
+  const sliceWidth = 100 / total;
+  const pad = inset ? sliceWidth * 0.12 : 0;
+  half.style.left = `${sliceWidth * index + pad}%`;
+  half.style.width = `${sliceWidth - pad * 2}%`;
+  if (inset) {
+    half.style.top = '12%';
+    half.style.bottom = '12%';
+    half.style.borderRadius = '3px';
+  }
   return half;
 }
 
@@ -96,11 +112,19 @@ export function renderOverlays(container: HTMLElement, view: BoardView, gs: Game
     marker.style.width = `${pos.w}px`;
     marker.style.height = `${pos.w}px`;
 
-    if (purpleSquares.has(square)) {
-      const purple = document.createElement('div');
-      purple.className = 'corrosion-purple';
-      purple.textContent = '☠'; // skull and crossbones
-      marker.appendChild(purple);
+    const isPurple = purpleSquares.has(square);
+
+    // Purple is split into a base tint (painted first, under everything) and
+    // a skull glyph (painted last, always on top) so a co-located corrosion
+    // cell -- inset via `bucketEl`'s `inset` flag below -- can never fully
+    // wash either one out. See the reviewer note on Task 10 for the bug this
+    // fixes: a live cls-3 cell standing on its own already-purple square
+    // (normal after it bounces off the board edge and retreads its trail)
+    // used to render as solid red with no purple/skull visible at all.
+    if (isPurple) {
+      const purpleBg = document.createElement('div');
+      purpleBg.className = 'corrosion-purple-bg';
+      marker.appendChild(purpleBg);
     }
 
     const entries = bySquare.get(square);
@@ -119,12 +143,19 @@ export function renderOverlays(container: HTMLElement, view: BoardView, gs: Game
       const bucketList = [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key));
       const total = bucketList.length;
       bucketList.forEach((b, i) => {
-        marker.appendChild(bucketEl(b, i, total));
+        marker.appendChild(bucketEl(b, i, total, isPurple));
         const leftHalf = i === 0;
         const clsText = b.cls3 ? '3' : b.hasCls2 ? '2' : null;
         if (clsText) marker.appendChild(badgeEl(clsText, leftHalf ? 'tl' : 'tr'));
         if (b.count > 1) marker.appendChild(badgeEl(`×${b.count}`, leftHalf ? 'bl' : 'br'));
       });
+    }
+
+    if (isPurple) {
+      const skull = document.createElement('div');
+      skull.className = 'corrosion-purple-skull';
+      skull.textContent = '☠'; // skull and crossbones
+      marker.appendChild(skull);
     }
 
     layer.appendChild(marker);

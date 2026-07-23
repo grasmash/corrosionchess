@@ -179,7 +179,11 @@ function mountDevTools(getState: () => GameState, setState: (s: GameState) => vo
       },
       { id: 904, color: 'w', cls: 3, cells: [cls3Sq], dir: forwardDir('w'), bornRound: 0 },
     ];
-    s.purple = [];
+    // The cls-3 unit starts on an already-purple square: purple is
+    // reachable-but-immune for cls3 (see corrosion.ts step 2/6), so this is
+    // the normal state after it bounces off the board edge and retreads a
+    // square from its own outbound trail -- not a synthetic edge case.
+    s.purple = [cls3Sq];
     s.nextId = 1000;
     return s;
   };

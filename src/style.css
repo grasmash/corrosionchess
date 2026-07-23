@@ -80,16 +80,26 @@ body {
   border-color: rgba(0, 0, 0, 0.75);
 }
 
-.corrosion-purple {
+/* Purple is two layers so a co-located corrosion cell (a class-3 unit is
+ * purple-immune, so it can legitimately stand on a square it already
+ * painted) can't fully wash either one out: the tint paints first/underneath
+ * everything, the skull paints last/on top of everything -- see overlays.ts. */
+.corrosion-purple-bg {
   position: absolute;
   inset: 0;
   background: rgba(128, 0, 160, 0.8);
+}
+
+.corrosion-purple-skull {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 1.1em;
   line-height: 1;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 4px rgba(0, 0, 0, 0.9);
 }
 
 .corrosion-badge {
