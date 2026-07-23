@@ -47,6 +47,10 @@ File convention consumed by the app: `public/pieces/<theme>/{wk,wq,wr,wb,wn,wp,b
    cross above it. When a queen keeps growing a cross after 2 retries, drop
    the crown shape entirely: use soft, non-geometric toppers (flame wisps,
    frosting swirl, flowing hair/energy) — verified fix on multiple themes.
-6. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
+6. **Dark/gothic castle framing also triggers the cross bias** (rooks grow a
+   cross finial above the crenellations). If positive flat-top phrasing fails
+   twice, change the FRAMING, not the wording — e.g. "dark stone gothic
+   tower" → "cozy painted brick tower" fixed it immediately.
+7. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
    renders a plain classic piece — check that the theme actually appears on
    every piece, not just that the silhouette is right.
