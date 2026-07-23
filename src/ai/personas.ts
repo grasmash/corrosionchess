@@ -37,8 +37,9 @@ export interface Persona {
   quips: Record<QuipEvent, string[]>;
   /** UI grouping for the selection screen (not part of the plan's literal
    * interface, but the cheapest way to let botselect.ts render "Family &
-   * Pets" vs "The Bobs" without re-deriving it from id/name string shape). */
-  group: 'family' | 'bob';
+   * Pets" vs "The Bobs" vs "Coach" without re-deriving it from id/name
+   * string shape). */
+  group: 'family' | 'bob' | 'coach';
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -266,7 +267,31 @@ const THEO: Persona = {
   },
 };
 
-export const FAMILY_PERSONAS: Persona[] = [TOBY, BELLA, MOM, DAD, ADDIE, THEO];
+const KESTONY_BASE = paramsForRating(2000); // level 3, blunderChance 0 -- used as-is, no override
+
+const KESTONY: Persona = {
+  id: 'kestony',
+  name: 'Coach Kestony',
+  rating: 2000,
+  tagline: 'Your toughest lesson yet',
+  avatar: 'avatars/kestony.png',
+  level: KESTONY_BASE.level,
+  blunderChance: KESTONY_BASE.blunderChance,
+  group: 'coach',
+  quips: {
+    start: ["Fundamentals first. Let's see what you've got.", 'This is your toughest lesson yet.', 'No shortcuts. We drill, then we play.', "Set up right, or don't set up at all."],
+    botCaptures: ["Textbook. That's what preparation looks like.", 'Good technique. That capture was earned.', 'See? Fundamentals win games.', "Clean take. We'll review why it worked."],
+    botLosesPiece: ["Even coaches drop a piece sometimes. Moving on.", "Noted. We'll review this later.", "That one's on me. Reset and refocus.", 'Small setback. The lesson continues.'],
+    corrosionSpawns: ["Corrosion safety briefing: don't stand on the spawn square.", 'New hazard on the board. Adjust and adapt.', 'Treat that square like out of bounds.', 'Rule one of corrosion: respect the spawn.'],
+    corrosionKills: ["That's why we teach corrosion safety.", 'Lesson learned the hard way -- for you.', "Should've read the safety briefing.", 'Textbook case of ignoring the hazard.'],
+    check: ['Check. King safety is lesson one for a reason.', "That's your cue to protect the king. Always.", 'Drill this: check means act now.', 'King safety. We covered this.'],
+    botWins: ['Checkmate. Fundamentals, every time.', "That's the lesson: preparation wins games.", 'Class dismissed. Good effort out there.', 'Textbook win. Take notes.'],
+    botLoses: ['Well played. You earned that one.', "Good game. We'll review this later.", "That's real progress. Nice work.", 'You beat the coach. Respect.'],
+    idle: ['Reviewing fundamentals in my head.', 'Patience. Every square has a purpose.', "We'll go over this one after the game.", 'Thinking three moves ahead, like always.'],
+  },
+};
+
+export const FAMILY_PERSONAS: Persona[] = [TOBY, BELLA, MOM, DAD, ADDIE, THEO, KESTONY];
 
 // --- The Bobs --------------------------------------------------------------
 

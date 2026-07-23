@@ -37,8 +37,17 @@ function isLegal(state: ReturnType<typeof initialState>, move: { from: number; t
 }
 
 describe('roster shape', () => {
-  it('has exactly six family personas', () => {
-    expect(FAMILY_PERSONAS.length).toBe(6);
+  it('has exactly seven family/coach personas', () => {
+    expect(FAMILY_PERSONAS.length).toBe(7);
+  });
+
+  it('includes Coach Kestony as a level-3, zero-blunder, rating-2000 coach persona', () => {
+    const kestony = FAMILY_PERSONAS.find(p => p.id === 'kestony')!;
+    expect(kestony).toBeDefined();
+    expect(kestony.rating).toBe(2000);
+    expect(kestony.level).toBe(3);
+    expect(kestony.blunderChance).toBe(0);
+    expect(kestony.group).toBe('coach');
   });
 
   it('every family persona has at least 3 quip lines for every event', () => {
@@ -67,10 +76,10 @@ describe('roster shape', () => {
     expect(joe.rating).toBe(550);
   });
 
-  it('full PERSONAS roster is the 6 family personas followed by the Bob army', () => {
-    expect(PERSONAS.length).toBe(15);
-    expect(PERSONAS.slice(0, 6)).toEqual(FAMILY_PERSONAS);
-    expect(PERSONAS.slice(6)).toEqual(BOB_ARMY_PERSONAS);
+  it('full PERSONAS roster is the 7 family/coach personas followed by the Bob army', () => {
+    expect(PERSONAS.length).toBe(16);
+    expect(PERSONAS.slice(0, 7)).toEqual(FAMILY_PERSONAS);
+    expect(PERSONAS.slice(7)).toEqual(BOB_ARMY_PERSONAS);
   });
 });
 

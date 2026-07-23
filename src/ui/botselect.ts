@@ -110,6 +110,7 @@ export function showBotSelect(onPick: (p: Persona) => void, onBack: () => void):
 
   const family = PERSONAS.filter(p => p.group === 'family');
   const bobs = PERSONAS.filter(p => p.group === 'bob');
+  const coaches = PERSONAS.filter(p => p.group === 'coach');
 
   const handleSelect = (p: Persona): void => {
     const cardEl = wrap.querySelector<HTMLButtonElement>(`.bot-card[data-persona-id="${p.id}"]`);
@@ -118,6 +119,9 @@ export function showBotSelect(onPick: (p: Persona) => void, onBack: () => void):
 
   wrap.appendChild(buildSection('Family & Pets', family, handleSelect));
   wrap.appendChild(buildSection('The Bobs', bobs, handleSelect));
+  if (coaches.length > 0) {
+    wrap.appendChild(buildSection('Coach', coaches, handleSelect));
+  }
 
   const buttons = document.createElement('div');
   buttons.className = 'setup-buttons bot-select-buttons';
