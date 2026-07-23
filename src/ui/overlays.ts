@@ -113,12 +113,30 @@ function unitVariantClass(color: Color, cls: 1 | 2 | 3): string {
 }
 
 /**
+ * Reads the `--vfx-speed` custom property currently in effect for `el`
+ * (inherited from an ancestor -- see the big comment above the
+ * `no-preference` media query block in style.css). Defaults to `1`
+ * (normal speed) wherever it's unset, i.e. everywhere outside the VFX Lab.
+ * JS-driven timings (the phase-A wait, and every fallback-removal timer
+ * below) multiply by this so they stay in sync with the CSS animation
+ * durations, which consume the same custom property directly -- without
+ * this, toggling "Slow motion" in the lab would stretch the CSS animations
+ * but leave the JS timers firing at normal speed, desyncing the
+ * choreography's phases from what's actually on screen.
+ */
+function vfxSpeed(el: HTMLElement): number {
+  const raw = getComputedStyle(el).getPropertyValue('--vfx-speed').trim();
+  const n = parseFloat(raw);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+/**
  * Removes `el` on `event` (once), with a fallback timer in case the event
  * never fires -- e.g. `prefers-reduced-motion` strips the transition/keyframe
  * this element was relying on, or the element gets detached some other way.
  */
 function autoRemove(el: HTMLElement, event: 'animationend' | 'transitionend', fallbackMs: number): void {
-  const timer = window.setTimeout(() => el.remove(), fallbackMs);
+  const timer = window.setTimeout(() => el.remove(), fallbackMs * vfxSpeed(el));
   el.addEventListener(
     event,
     () => {
@@ -133,7 +151,7 @@ function autoRemove(el: HTMLElement, event: 'animationend' | 'transitionend', fa
  * removing the element -- used for `is-spawning`/`is-marching`, which mark a
  * persistent unit div mid-animation rather than a one-shot effect. */
 function autoRemoveClass(el: HTMLElement, cls: string, event: 'animationend' | 'transitionend', fallbackMs: number): void {
-  const timer = window.setTimeout(() => el.classList.remove(cls), fallbackMs);
+  const timer = window.setTimeout(() => el.classList.remove(cls), fallbackMs * vfxSpeed(el));
   el.addEventListener(
     event,
     () => {
@@ -149,11 +167,38 @@ function playDeath(el: HTMLDivElement): void {
   autoRemove(el, 'animationend', 900);
 }
 
-/** All squares occupied by any corrosion cell in `gs`, used to recognize a
- * piece destroyed by corrosion (as opposed to a normal capture) below. */
+/**
+ * All squares "touched by corrosion" in `gs`, used to recognize a piece
+ * destroyed by corrosion (as opposed to a normal capture) below: every cell's
+ * resting square, PLUS one step either side of it along its unit's `dir`.
+ *
+ * The extra one-step squares matter because of a real gap this covers: per
+ * corrosion.ts's strikeAt, a cell that successfully destroys a piece is
+ * REMOVED from its unit in that same corrosionPhase call -- it never
+ * "rests" at the strike square in any `GameState` snapshot this module ever
+ * sees, before or after. A plain "does this square hold a resting cell in
+ * prev or gs" check (an earlier version of this function) misses that
+ * square entirely unless some OTHER cell happens to coincidentally occupy
+ * it too -- which is common in a busy multi-unit real game (masking this for
+ * a long time) but reliably absent in an isolated single-unit repro, which
+ * is how the VFX Lab's "Piece killed by corrosion" scenario first exposed
+ * it: the ghost/kill choreography silently never fired at all for a
+ * lead-cell-strikes-and-dies kill. See the exec report for the full
+ * diagnostic -- this is likely the actual, or at least a major, cause of
+ * the "reads as a plain disappear" complaint that started this VFX Lab
+ * work, more so than mere noticeability. Over-including a few extra squares
+ * here is safe: the caller's `before && !after` check already excludes
+ * normal captures regardless (the capturing piece stands on `after`).
+ */
 function allCorrosionSquares(gs: GameState): Set<number> {
   const s = new Set<number>();
-  for (const u of gs.corrosions) for (const c of u.cells) s.add(c);
+  for (const u of gs.corrosions) {
+    for (const c of u.cells) {
+      s.add(c);
+      s.add(c + u.dir * gs.size);
+      s.add(c - u.dir * gs.size);
+    }
+  }
   return s;
 }
 
@@ -274,30 +319,48 @@ function killPieceOnSquare(
   const startPhaseB = () => {
     const reduced = prefersReducedMotion();
     ghost.classList.add('is-corroding');
-    autoRemove(ghost, 'animationend', reduced ? 300 : 1700);
+    // Fallback slightly longer than the 1.7s `piece-corrode`/`is-feeding`
+    // CSS durations they back up (see style.css) -- both are scaled by the
+    // same `--vfx-speed` via vfxSpeed() inside autoRemove/autoRemoveClass.
+    autoRemove(ghost, 'animationend', reduced ? 300 : 1900);
     spawnKillBurst(unitsLayer, square, squarePx, board);
     for (const unitEl of unitEntriesAt()) {
       unitEl.classList.add('is-feeding');
-      autoRemoveClass(unitEl, 'is-feeding', 'animationend', reduced ? 300 : 1500);
+      autoRemoveClass(unitEl, 'is-feeding', 'animationend', reduced ? 300 : 1800);
     }
   };
 
   if (delayed && !prefersReducedMotion()) {
     // 480ms matches `.corrosion-unit.is-marching`'s `translate` transition
-    // duration in style.css -- keep these two in sync.
-    window.setTimeout(startPhaseB, 480);
+    // duration in style.css -- keep these two in sync. Scaled by the same
+    // `--vfx-speed` the CSS duration itself consumes -- see vfxSpeed()'s
+    // comment -- so this wait stretches along with the march transition
+    // under the VFX Lab's slow-motion toggle instead of firing at normal
+    // speed while the CSS animation plays 4x slower.
+    window.setTimeout(startPhaseB, 480 * vfxSpeed(unitsLayer));
   } else {
     startPhaseB();
   }
 }
 
-// Persistent (unit id, cell index) -> div map, one per units-sublayer element
-// (a fresh element per new game, since buildGameLayout() rebuilds `boardEl`
-// from scratch -- see main.ts). This is what makes per-unit animation
-// possible: unlike the old bucket-by-square rendering, a unit's div survives
-// across renders and is only moved/killed/spawned based on whether its own
-// (id, cell index) key is still present in `gs.corrosions`.
-const unitMaps = new WeakMap<HTMLDivElement, Map<string, UnitDivEntry>>();
+// Persistent unit id -> (that unit's current cell divs) map, one per
+// units-sublayer element (a fresh element per new game, since
+// buildGameLayout() rebuilds `boardEl` from scratch -- see main.ts). This is
+// what makes per-unit animation possible: unlike the old bucket-by-square
+// rendering, a unit's divs survive across renders.
+//
+// Entries are matched to this render's cells by EXPECTED POSITION (unchanged
+// square, or one march-step away using the unit's current `dir`), not by
+// array index -- a previous version keyed by `${unitId}:${cellIndex}` and
+// broke when a unit lost a cell mid-array (e.g. a cls-2 unit's LEAD cell
+// striking and destroying a piece, per corrosion.ts's strikeAt, which also
+// removes that same cell -- the SURVIVING trail cell shifts from index 1 to
+// index 0, so the old index-0 entry (the lead's div, which just died) got
+// mistaken for "still alive, just standing still" while the real survivor's
+// march went unrendered and a phantom death animation played at the wrong
+// square. Found via the VFX Lab's "Piece killed by corrosion" scenario --
+// see the exec report.
+const unitMaps = new WeakMap<HTMLDivElement, Map<number, UnitDivEntry[]>>();
 
 function renderUnits(
   unitsLayer: HTMLDivElement,
@@ -314,95 +377,166 @@ function renderUnits(
 
   const firstRender = prev == null;
   const purpleSquares = new Set(gs.purple);
+  const currentUnitIds = new Set(gs.corrosions.map(u => u.id));
 
-  const current = new Map<string, { sq: number; color: Color; cls: 1 | 2 | 3; dir: 1 | -1; unitId: number }>();
-  for (const u of gs.corrosions) {
-    u.cells.forEach((sq, i) => {
-      current.set(`${u.id}:${i}`, { sq, color: u.color, cls: u.cls, dir: u.dir, unitId: u.id });
-    });
-  }
-
-  // Death: a key that existed last render but is gone now (unit annihilated,
-  // or a cls-2 collapsing to cls-3 dropped its trail cell).
-  for (const [key, entry] of map) {
-    if (!current.has(key)) {
-      map.delete(key);
-      playDeath(entry.el);
+  // Death: a whole unit id that existed last render but is gone now (fully
+  // annihilated, or every remaining cell died to purple/a strike in the same
+  // phase).
+  for (const [unitId, entries] of map) {
+    if (!currentUnitIds.has(unitId)) {
+      for (const entry of entries) playDeath(entry.el);
+      map.delete(unitId);
     }
   }
 
-  // Squares a corrosion cell actually marched onto (not spawned onto, not
-  // already there from a prior render) this render -- read below by the
-  // piece-destroy choreography to decide whether the kill needs to wait for
-  // the arriving blob (phase A) or can start destroying immediately.
+  // Squares a corrosion cell marched onto this render (not spawned onto, not
+  // already there from a prior render) -- read below by the piece-destroy
+  // choreography to decide whether the kill needs to wait for the arriving
+  // blob (phase A) or can start destroying immediately. Built from the
+  // per-cell match loop below for SURVIVING cells; a cell that struck a
+  // piece and was removed in the same corrosionPhase call (see strikeAt in
+  // corrosion.ts) never appears in `gs.corrosions` to be counted there, so
+  // it's topped up afterward from `prev` directly -- see the comment past
+  // the loop below. Without that, a march-kill (the common case phase A
+  // exists for) would skip straight to phase B every time, silently losing
+  // the "acid visibly arriving" buildup for exactly the kills it matters
+  // most for.
   const marchedToSquare = new Set<number>();
 
-  // Spawn/march/update.
-  for (const [key, { sq, color, cls, dir, unitId }] of current) {
-    const pos = squarePx(sq);
-    const inset = purpleSquares.has(sq) ? pos.w * 0.12 : 0;
-    const x = pos.x - board.left + inset;
-    const y = pos.y - board.top + inset;
-    const size = pos.w - inset * 2;
+  // Spawn/march/update, per unit -- matching this unit's OLD divs to its
+  // CURRENT cells by expected position (see the WeakMap comment above)
+  // rather than trusting array order to stay stable.
+  for (const u of gs.corrosions) {
+    const oldEntries = map.get(u.id) ?? [];
+    const claimed = new Array<boolean>(oldEntries.length).fill(false);
+    const newEntries: UnitDivEntry[] = [];
 
-    let entry = map.get(key);
-    const isSpawn = !entry;
-    if (!entry) {
-      const el = document.createElement('div');
-      const sprite = document.createElement('div');
-      sprite.className = 'corrosion-unit-sprite';
-      const chevrons = document.createElement('div');
-      chevrons.className = 'corrosion-unit-chevrons';
-      // 2-3 leading-edge chevrons (see marchAngleDeg / the CSS `--march-angle`
-      // custom property for the direction math); populated once here, styled
-      // and animated entirely from CSS/the custom property below.
-      chevrons.innerHTML = '<span class="chevron"></span><span class="chevron"></span><span class="chevron"></span>';
-      el.append(sprite, chevrons);
-      unitsLayer.appendChild(el);
-      entry = { el, sprite, chevrons, sq };
-      map.set(key, entry);
+    // Match cells to old entries in three PRIORITY passes rather than one
+    // combined check -- "moved" must win over "unchanged" when both are
+    // possible for the same current cell, or a marching unit's cells get
+    // mismatched. Concretely: lead=d4, trail=d3, dir=+1, lead strikes and
+    // dies, trail survives and moves to d4 -- the surviving cell's new
+    // square (d4) is BOTH "unchanged" from the dead lead's old square AND
+    // "moved" from the trail's old square. Checking "unchanged" first (as an
+    // earlier version of this loop did) wrongly binds the survivor to the
+    // dead lead's div, leaving the actual survivor (trail) undetected as
+    // having moved (no march animation) and playing the death animation at
+    // the trail's old square instead of where the strike actually happened.
+    // Checking "moved" first resolves the ambiguity correctly. Found via the
+    // VFX Lab's "Piece killed by corrosion" scenario -- see the exec report.
+    const cellMatch = new Array<number>(u.cells.length).fill(-1);
+    const matchPass = (expectedOldSq: (cellSq: number) => number) => {
+      u.cells.forEach((cellSq, ci) => {
+        if (cellMatch[ci] !== -1) return;
+        const target = expectedOldSq(cellSq);
+        for (let i = 0; i < oldEntries.length; i++) {
+          if (claimed[i] || oldEntries[i].sq !== target) continue;
+          cellMatch[ci] = i;
+          claimed[i] = true;
+          break;
+        }
+      });
+    };
+    matchPass(cellSq => cellSq - u.dir * gs.size); // moved forward by dir
+    matchPass(cellSq => cellSq); // unchanged (non-mover this phase)
+    matchPass(cellSq => cellSq + u.dir * gs.size); // moved backward (dir just flipped)
+
+    u.cells.forEach((cellSq, ci) => {
+      const matchIdx = cellMatch[ci];
+      const pos = squarePx(cellSq);
+      const inset = purpleSquares.has(cellSq) ? pos.w * 0.12 : 0;
+      const x = pos.x - board.left + inset;
+      const y = pos.y - board.top + inset;
+      const size = pos.w - inset * 2;
+
+      let entry: UnitDivEntry;
+      const isSpawn = matchIdx === -1;
+      if (!isSpawn) {
+        // `claimed[matchIdx]` was already set true inside matchPass above.
+        entry = oldEntries[matchIdx];
+      } else {
+        const el = document.createElement('div');
+        const sprite = document.createElement('div');
+        sprite.className = 'corrosion-unit-sprite';
+        const chevrons = document.createElement('div');
+        chevrons.className = 'corrosion-unit-chevrons';
+        // 2-3 leading-edge chevrons (see marchAngleDeg / the CSS `--march-angle`
+        // custom property for the direction math); populated once here, styled
+        // and animated entirely from CSS/the custom property below.
+        chevrons.innerHTML = '<span class="chevron"></span><span class="chevron"></span><span class="chevron"></span>';
+        el.append(sprite, chevrons);
+        unitsLayer.appendChild(el);
+        entry = { el, sprite, chevrons, sq: cellSq };
+      }
+
+      // Donut/ring instead of a solid blob when a piece currently occupies
+      // this square (a friendly pass-through co-occupancy, e.g. corrosion
+      // spawning onto the capturing piece's own square) -- the raised
+      // opacities below would otherwise fully hide the piece under the blob.
+      // The sprite texture is hidden and the flat `--donut` gradient ring
+      // (already correct and verified) takes over as the sole visible layer --
+      // simpler and lower-risk than mask-image-ing a hole into a photographed
+      // sprite, and explicitly sanctioned as the fallback for this case.
+      const hasPiece = gs.board[cellSq] != null;
+      entry.el.className = unitVariantClass(u.color, u.cls) + (hasPiece ? ' corrosion-unit--donut' : '');
+      entry.el.style.width = `${size}px`;
+      entry.el.style.height = `${size}px`;
+      entry.sprite.style.backgroundImage = `url(${spriteFor(u.color, u.cls, u.id)})`;
+      entry.sprite.style.display = hasPiece ? 'none' : '';
+      // Drives both the chevrons' pointing direction and (via the same
+      // variable, see style.css) the drips' bias toward the trailing/back
+      // edge -- recomputed every render since a class-3 unit's `dir` flips
+      // when it bounces off a board edge.
+      entry.el.style.setProperty('--march-angle', `${marchAngleDeg(cellSq, u.dir, gs.size, squarePx)}deg`);
+
+      const moved = !isSpawn && entry.sq !== cellSq;
+      if (moved) marchedToSquare.add(cellSq);
+      // Standalone `translate`, not the `transform` shorthand -- see the
+      // comment in createIntactGhost above. The idle `acid-pulse` keyframes
+      // animate the standalone `scale` property and `march-wobble` animates
+      // the `transform` shorthand; all three are independent properties that
+      // compose, so this position, the idle pulse, and the march wobble can
+      // all be in effect on the same div at once without one clobbering
+      // another the way two rules both setting `transform` would.
+      entry.el.style.translate = `${x}px ${y}px`;
+      entry.sq = cellSq;
+
+      if (isSpawn) {
+        if (!firstRender) {
+          entry.el.classList.add('is-spawning');
+          autoRemoveClass(entry.el, 'is-spawning', 'animationend', 500);
+        }
+      } else if (moved) {
+        entry.el.classList.add('is-marching');
+        autoRemoveClass(entry.el, 'is-marching', 'transitionend', 550);
+      }
+
+      newEntries.push(entry);
+    });
+
+    // Old cells of THIS unit that found no match this render died this
+    // phase (e.g. a lead cell that struck a piece while its trail sibling
+    // survived, or lost to purple/annihilation individually).
+    for (let i = 0; i < oldEntries.length; i++) {
+      if (!claimed[i]) playDeath(oldEntries[i].el);
     }
 
-    // Donut/ring instead of a solid blob when a piece currently occupies
-    // this square (a friendly pass-through co-occupancy, e.g. corrosion
-    // spawning onto the capturing piece's own square) -- the raised
-    // opacities below would otherwise fully hide the piece under the blob.
-    // The sprite texture is hidden and the flat `--donut` gradient ring
-    // (already correct and verified) takes over as the sole visible layer --
-    // simpler and lower-risk than mask-image-ing a hole into a photographed
-    // sprite, and explicitly sanctioned as the fallback for this case.
-    const hasPiece = gs.board[sq] != null;
-    entry.el.className = unitVariantClass(color, cls) + (hasPiece ? ' corrosion-unit--donut' : '');
-    entry.el.style.width = `${size}px`;
-    entry.el.style.height = `${size}px`;
-    entry.sprite.style.backgroundImage = `url(${spriteFor(color, cls, unitId)})`;
-    entry.sprite.style.display = hasPiece ? 'none' : '';
-    // Drives both the chevrons' pointing direction and (via the same
-    // variable, see style.css) the drips' bias toward the trailing/back
-    // edge -- recomputed every render since a class-3 unit's `dir` flips
-    // when it bounces off a board edge.
-    entry.el.style.setProperty('--march-angle', `${marchAngleDeg(sq, dir, gs.size, squarePx)}deg`);
+    map.set(u.id, newEntries);
+  }
 
-    const moved = !isSpawn && entry.sq !== sq;
-    if (moved) marchedToSquare.add(sq);
-    // Standalone `translate`, not the `transform` shorthand -- see the
-    // comment in createIntactGhost above. The idle `acid-pulse` keyframes
-    // animate the standalone `scale` property and `march-wobble` animates
-    // the `transform` shorthand; all three are independent properties that
-    // compose, so this position, the idle pulse, and the march wobble can
-    // all be in effect on the same div at once without one clobbering
-    // another the way two rules both setting `transform` would.
-    entry.el.style.translate = `${x}px ${y}px`;
-    entry.sq = sq;
-
-    if (isSpawn) {
-      if (!firstRender) {
-        entry.el.classList.add('is-spawning');
-        autoRemoveClass(entry.el, 'is-spawning', 'animationend', 500);
-      }
-    } else if (moved) {
-      entry.el.classList.add('is-marching');
-      autoRemoveClass(entry.el, 'is-marching', 'transitionend', 550);
+  // Top up `marchedToSquare` with cells that marched into a square and were
+  // immediately consumed striking a piece there (see the comment above this
+  // set's declaration) -- computed straight from `prev`, since such a cell
+  // never survives into `gs.corrosions` for the loop above to have counted
+  // it. Uses each prev unit's OWN `dir`, which is correct for cls-1/2 (never
+  // flips mid-strike); a cls-3 bounce technically flips `dir` before this
+  // same phase's movement, so this could in principle miss a cls-3 strike's
+  // phase-A timing right at a bounce, but cls-3's hostile-with-everything
+  // semantics make that a narrow edge case, not the common one this exists
+  // for.
+  if (prev) {
+    for (const u of prev.corrosions) {
+      for (const c of u.cells) marchedToSquare.add(c + u.dir * gs.size);
     }
   }
 
@@ -422,7 +556,7 @@ function renderUnits(
       const after = gs.board[sq];
       if (before && !after && (prevCorrSquares.has(sq) || currCorrSquares.has(sq)) && !isEnPassantVacate(prev, gs, sq, before)) {
         killPieceOnSquare(unitsLayer, before, sq, squarePx, board, marchedToSquare.has(sq), () =>
-          [...map.values()].filter(entry => entry.sq === sq).map(entry => entry.el)
+          [...map.values()].flat().filter(entry => entry.sq === sq).map(entry => entry.el)
         );
       }
     }

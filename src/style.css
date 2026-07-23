@@ -582,13 +582,29 @@ cg-board square.selected {
 /* --- Animated look, gated behind reduced-motion. One-shot spawn/death/etch
  * animations still play (shortened) under reduced motion; only the
  * continuous idle/march animations are fully disabled. --- */
+/* Plan 001 / VFX Lab: every corrosion animation-duration/transition-duration
+ * below is `calc(var(--vfx-speed, 1) * Xms)` rather than a bare literal.
+ * `--vfx-speed` defaults to 1 (unset anywhere outside the lab -- normal
+ * speed everywhere in real play, unaffected). The VFX Lab's "Slow motion"
+ * toggle sets it to `4` on its own board container (`--vfx-speed` inherits
+ * down through the DOM, so this one declaration retimes every corrosion
+ * animation inside the lab without touching a live game elsewhere) -- 4x
+ * duration is what makes "0.25x" playback speed, the toggle's own label,
+ * since duration and playback rate are inverses of each other. The
+ * `killPieceOnSquare`/`autoRemove`/`autoRemoveClass` JS timers in
+ * overlays.ts read the SAME computed `--vfx-speed` value (via `vfxSpeed()`)
+ * and multiply their own setTimeout delays by it, so the JS-driven phase-A
+ * wait and fallback-removal timers stay in sync with these CSS durations
+ * instead of firing at normal speed while the animations play in slow
+ * motion. */
 @media (prefers-reduced-motion: no-preference) {
   .corrosion-unit {
-    animation: acid-pulse 2.8s ease-in-out infinite alternate;
+    animation: acid-pulse calc(var(--vfx-speed, 1) * 2.8s) ease-in-out infinite alternate;
   }
 
   .corrosion-unit--cls3 {
-    animation: acid-pulse 1.2s ease-in-out infinite alternate, cls3-seethe 6s linear infinite;
+    animation: acid-pulse calc(var(--vfx-speed, 1) * 1.2s) ease-in-out infinite alternate,
+      cls3-seethe calc(var(--vfx-speed, 1) * 6s) linear infinite;
   }
 
   /* Slow rotation wobble of the sprite layer -- independent of everything
@@ -596,88 +612,97 @@ cg-board square.selected {
    * `.corrosion-unit-sprite`). cls-3 gets a faster wobble to match its
    * generally faster/angrier pulse/seethe cadence elsewhere. */
   .corrosion-unit-sprite {
-    animation: sprite-wobble 7s ease-in-out infinite alternate;
+    animation: sprite-wobble calc(var(--vfx-speed, 1) * 7s) ease-in-out infinite alternate;
   }
 
   .corrosion-unit--cls3 .corrosion-unit-sprite {
-    animation-duration: 3.5s;
+    animation-duration: calc(var(--vfx-speed, 1) * 3.5s);
   }
 
   .corrosion-unit::after {
-    animation: acid-bubbles 3s linear infinite;
+    animation: acid-bubbles calc(var(--vfx-speed, 1) * 3s) linear infinite;
   }
 
   /* Fade+drift "flowing toward direction" loop, staggered per chevron for a
    * flock-like flow rather than all three pulsing in lockstep. */
   .corrosion-unit-chevrons .chevron:nth-child(1) {
-    animation: chevron-flow 1s ease-in-out infinite;
+    animation: chevron-flow calc(var(--vfx-speed, 1) * 1s) ease-in-out infinite;
   }
   .corrosion-unit-chevrons .chevron:nth-child(2) {
-    animation: chevron-flow 1s ease-in-out infinite;
-    animation-delay: 0.33s;
+    animation: chevron-flow calc(var(--vfx-speed, 1) * 1s) ease-in-out infinite;
+    animation-delay: calc(var(--vfx-speed, 1) * 0.33s);
   }
   .corrosion-unit-chevrons .chevron:nth-child(3) {
-    animation: chevron-flow 1s ease-in-out infinite;
-    animation-delay: 0.66s;
+    animation: chevron-flow calc(var(--vfx-speed, 1) * 1s) ease-in-out infinite;
+    animation-delay: calc(var(--vfx-speed, 1) * 0.66s);
   }
 
   .corrosion-unit.is-feeding {
     /* Roughly matches the phase-B `piece-corrode` duration below so the
      * bubble surge lasts as long as the kill itself is playing out. */
-    animation-duration: 1.5s, 8s;
+    animation-duration: calc(var(--vfx-speed, 1) * 1.7s), calc(var(--vfx-speed, 1) * 8s);
   }
 
   .corrosion-unit.is-feeding::after {
-    animation-duration: 1.3s;
+    animation-duration: calc(var(--vfx-speed, 1) * 1.3s);
   }
 
   .corrosion-unit.is-marching {
     /* Transitions the standalone `translate` property JS updates on march,
      * not `transform` -- see the note above `.corrosion-unit`. */
-    transition: translate 480ms cubic-bezier(0.5, 0, 0.2, 1);
-    animation: acid-pulse 2.8s ease-in-out infinite alternate, march-wobble 480ms ease-in-out;
+    transition: translate calc(var(--vfx-speed, 1) * 480ms) cubic-bezier(0.5, 0, 0.2, 1);
+    animation: acid-pulse calc(var(--vfx-speed, 1) * 2.8s) ease-in-out infinite alternate,
+      march-wobble calc(var(--vfx-speed, 1) * 480ms) ease-in-out;
   }
 
   .corrosion-unit--cls3.is-marching {
-    animation: acid-pulse 1.2s ease-in-out infinite alternate, cls3-seethe 6s linear infinite, march-wobble 480ms ease-in-out;
+    animation: acid-pulse calc(var(--vfx-speed, 1) * 1.2s) ease-in-out infinite alternate,
+      cls3-seethe calc(var(--vfx-speed, 1) * 6s) linear infinite,
+      march-wobble calc(var(--vfx-speed, 1) * 480ms) ease-in-out;
   }
 
   .corrosion-unit.is-spawning {
-    animation: acid-splash 450ms ease-out;
+    animation: acid-splash calc(var(--vfx-speed, 1) * 450ms) ease-out;
   }
 
   .corrosion-unit.is-dying {
-    animation: acid-dissolve 600ms ease-in forwards;
+    animation: acid-dissolve calc(var(--vfx-speed, 1) * 600ms) ease-in forwards;
   }
 
   /* Phase B only: `is-corroding` isn't added until killPieceOnSquare decides
    * phase A (if any) is over -- see the comment above `.corrosion-piece-ghost`
-   * and killPieceOnSquare in overlays.ts. 1.5s = jolt/flash (~0-16%) + purple
+   * and killPieceOnSquare in overlays.ts. 1.7s = jolt/flash (~0-16%) + purple
    * shift/cracks (~16-45%) + sink/dissolve (45-100%); combined with phase A's
-   * 480ms wait this lands the full march-kill sequence in the ~1.8-2.2s
-   * range the choreography calls for. */
+   * 480ms wait this lands the full march-kill sequence at ~2.18s, inside the
+   * ~1.8-2.2s range the choreography calls for. Bumped from the original
+   * 1.5s/brightness(2.4) (see `piece-corrode`'s 4% stop) after the VFX Lab
+   * diagnostic found the sequence technically renders fine but reads as
+   * "a plain disappear" at normal game pace -- a bigger flash and slightly
+   * longer phase B make it easier to register even when it's happening on a
+   * square the player isn't currently looking at (see the exec report for
+   * the full diagnostic). */
   .corrosion-piece-ghost.is-corroding {
-    animation: piece-corrode 1.5s ease-in forwards;
+    animation: piece-corrode calc(var(--vfx-speed, 1) * 1.7s) ease-in forwards;
   }
 
   .corrosion-piece-ghost.is-corroding::after {
-    animation: piece-crack 1.5s ease-in forwards;
+    animation: piece-crack calc(var(--vfx-speed, 1) * 1.7s) ease-in forwards;
   }
 
   .corrosion-kill-burst {
-    animation: kill-burst 900ms ease-out forwards;
+    animation: kill-burst calc(var(--vfx-speed, 1) * 950ms) ease-out forwards;
   }
 
   .corrosion-purple-bg::after {
-    animation: void-smoke-rotate 12s linear infinite;
+    animation: void-smoke-rotate calc(var(--vfx-speed, 1) * 12s) linear infinite;
   }
 
   .corrosion-purple-bg.is-purpling {
-    animation: purple-etch-in 500ms ease-out;
+    animation: purple-etch-in calc(var(--vfx-speed, 1) * 500ms) ease-out;
   }
 
   .corrosion-purple-skull {
-    animation: skull-flicker 4s ease-in-out infinite;
+    animation: skull-flicker calc(var(--vfx-speed, 1) * 4s) ease-in-out infinite;
   }
 }
 
@@ -807,6 +832,12 @@ cg-board square.selected {
  * keyframe's transform "shape" changes, which still animates smoothly here,
  * just without guaranteed axis-linear interpolation, which doesn't matter
  * for a shake-then-sink effect like this one. */
+/* Flash peak bumped from an earlier brightness(2.4)/scale(1.03) -- the VFX
+ * Lab diagnostic (see the exec report) found the sequence renders correctly
+ * but reads as "a plain disappear" at real-game pace, especially when the
+ * kill lands on a square the player isn't looking at. Bigger jolt (scale
+ * swings) and a brighter flash peak make it easier to catch out of the
+ * corner of the eye. */
 @keyframes piece-corrode {
   0% {
     filter: sepia(0) hue-rotate(0deg) saturate(1) brightness(1) blur(0);
@@ -814,18 +845,18 @@ cg-board square.selected {
     opacity: 1;
   }
   4% {
-    filter: sepia(0) hue-rotate(0deg) saturate(1) brightness(2.4) blur(0);
-    transform: translate(-6%, 3%) scale(1.03);
+    filter: sepia(0) hue-rotate(0deg) saturate(1.2) brightness(3.2) blur(0);
+    transform: translate(-9%, 5%) scale(1.08);
     opacity: 1;
   }
   8% {
-    filter: sepia(0.4) hue-rotate(120deg) saturate(1.6) brightness(2) blur(0);
-    transform: translate(6%, -4%) scale(0.97);
+    filter: sepia(0.4) hue-rotate(120deg) saturate(1.8) brightness(2.5) blur(0);
+    transform: translate(9%, -6%) scale(0.93);
     opacity: 1;
   }
   12% {
-    filter: sepia(0.8) hue-rotate(200deg) saturate(2) brightness(1.4) blur(0);
-    transform: translate(-3%, 2%) scale(1.01);
+    filter: sepia(0.8) hue-rotate(200deg) saturate(2) brightness(1.6) blur(0);
+    transform: translate(-4%, 3%) scale(1.03);
     opacity: 1;
   }
   16% {
@@ -1816,4 +1847,54 @@ input[type='text'] {
   width: 2.4rem;
   padding: 0.7rem 0;
   font-size: 1rem;
+}
+
+/* --- VFX Lab (Plan 001 iteration, DEV-only) --- */
+
+.vfxlab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 640px;
+}
+
+.vfxlab-board {
+  width: min(90vw, 480px);
+  height: min(90vw, 480px);
+}
+
+.vfxlab-status {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  min-height: 1.3em;
+}
+
+.vfxlab-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.vfxlab-slowmo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.vfxlab-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.vfxlab-scenario-btn {
+  font-size: 0.85rem;
+  padding: 0.55rem 0.9rem;
 }

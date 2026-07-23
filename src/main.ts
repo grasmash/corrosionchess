@@ -16,6 +16,7 @@ import { renderHud, pickPromotion } from './ui/hud';
 import type { NetStatus } from './ui/hud';
 import { showBotSelect } from './ui/botselect';
 import { showSplash } from './ui/splash';
+import { mountVfxLab } from './ui/vfxlab';
 import { applyPieceSet, currentPieceSet } from './ui/piecesets';
 import { applyBoardTheme, currentBoardTheme } from './ui/boardthemes';
 import { copyText } from './ui/clipboard';
@@ -55,10 +56,24 @@ function backToSetup(): void {
   start();
 }
 
-/** Top-level router: `#join=<id>&cfg=<token>` vs. the setup screen. */
+/** Top-level router: `#join=<id>&cfg=<token>` vs. the setup screen, plus a
+ * DEV-only `#vfxlab` escape hatch straight to the VFX Lab (see mountVfxLab's
+ * own doc comment) -- the `import.meta.env.DEV` check here matches the one
+ * around mountDevTools below, so this route (and the whole vfxlab module,
+ * via Vite/Rollup dead-code elimination once the call site is unreachable)
+ * doesn't ship in production. */
 function start(): void {
   const hash = window.location.hash.replace(/^#/, '');
   const hashParams = new URLSearchParams(hash);
+
+  if (import.meta.env.DEV && hashParams.has('vfxlab')) {
+    mountVfxLab(() => {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      start();
+    });
+    return;
+  }
+
   const joinId = hashParams.get('join');
 
   if (joinId) {
@@ -867,6 +882,16 @@ function mountDevTools(getState: () => GameState, setState: (s: GameState) => vo
     });
   };
 
-  devTools.append(seedBtn, phaseBtn, promotionBtn);
+  const vfxLabBtn = document.createElement('button');
+  vfxLabBtn.textContent = 'VFX Lab';
+  vfxLabBtn.onclick = () => {
+    window.location.hash = 'vfxlab';
+    mountVfxLab(() => {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      start();
+    });
+  };
+
+  devTools.append(seedBtn, phaseBtn, promotionBtn, vfxLabBtn);
   appEl.appendChild(devTools);
 }
