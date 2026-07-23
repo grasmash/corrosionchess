@@ -30,6 +30,7 @@ import { mountVfxLab } from './ui/vfxlab';
 import { applyPieceSet, currentPieceSet } from './ui/piecesets';
 import { applyBoardTheme, currentBoardTheme } from './ui/boardthemes';
 import { copyText } from './ui/clipboard';
+import { playSoundsForTransition, unlockAudio, playSound } from './ui/audio';
 import { newGame, applyMove } from './engine/game';
 import { legalMoves, inCheck } from './engine/legal';
 import { corrosionPhase } from './engine/corrosion';
@@ -553,6 +554,7 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
     lastDests = dests;
     view.setState(state, dests);
     renderOverlays(boardEl, view, state, prevState, currentSelection());
+    playSoundsForTransition(prevState, state, youAre);
     prevState = state;
     renderHud(hudEl, state, {
       youAre,
@@ -729,6 +731,7 @@ function startGame(setup: SetupResult): void {
     lastDests = dests;
     view.setState(state, dests);
     renderOverlays(boardEl, view, state, prevState, currentSelection());
+    playSoundsForTransition(prevState, state);
     prevState = state;
     renderHud(hudEl, state, { onNewGame: start });
   }
@@ -842,6 +845,7 @@ function startBotGame(config: Config, persona: Persona, humanColor: Color): void
     lastDests = dests;
     view.setState(state, dests);
     renderOverlays(boardEl, view, state, prevState, currentSelection());
+    playSoundsForTransition(prevState, state, humanColor);
     prevState = state;
     renderHud(hudEl, state, {
       youAre: humanColor,
@@ -1005,6 +1009,15 @@ if ('serviceWorker' in navigator) {
     window.location.reload();
   });
 }
+
+// Plan 008: unlock the WebAudio context on the very first user gesture
+// (browsers refuse to start audio before one -- autoplay policy) and give
+// every button a uniform click sound without threading a call through each
+// button's own handler.
+document.addEventListener('pointerdown', () => unlockAudio(), { once: true });
+document.addEventListener('click', e => {
+  if ((e.target as HTMLElement).closest('button')) playSound('uiClick');
+});
 
 // --- Dev-only tools: eyeball corrosion overlay rendering (marching,
 // stacking, class-3/purple) and exercise the promotion picker without

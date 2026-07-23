@@ -1,6 +1,7 @@
 import { PIECE_SETS, currentPieceSet, setPieceSet, pieceImageUrl } from './piecesets';
 import { BOARD_THEMES, currentBoardTheme, setBoardTheme } from './boardthemes';
 import type { BoardTheme } from './boardthemes';
+import { currentSfxOn, currentMusicOn, currentVolume, setSfxOn, setMusicOn, setVolume } from './audio';
 
 /** Back rank in file order, reused for both the preview's back-rank row and
  * to key generated-set filenames (b + role, e.g. `bp`, `bn`). */
@@ -69,6 +70,9 @@ function buildPreviewRow(roles: readonly string[], setId: string, rowIndex: numb
 export function showSettings(onClose: () => void): void {
   let selectedPieceSet = currentPieceSet();
   let selectedBoardTheme = currentBoardTheme();
+  let selectedSfxOn = currentSfxOn();
+  let selectedMusicOn = currentMusicOn();
+  let selectedVolume = currentVolume();
 
   const overlay = document.createElement('div');
   overlay.className = 'promotion-modal-overlay';
@@ -159,6 +163,55 @@ export function showSettings(onClose: () => void): void {
   boardField.append(boardFieldLabel, boardSelect);
   modal.appendChild(boardField);
 
+  const sfxField = document.createElement('label');
+  sfxField.className = 'settings-field';
+  sfxField.htmlFor = 'settings-sfx';
+  const sfxFieldLabel = document.createElement('span');
+  sfxFieldLabel.className = 'settings-field-label';
+  sfxFieldLabel.textContent = 'Sound effects';
+  const sfxCheckbox = document.createElement('input');
+  sfxCheckbox.type = 'checkbox';
+  sfxCheckbox.id = 'settings-sfx';
+  sfxCheckbox.name = 'sfx';
+  sfxCheckbox.checked = selectedSfxOn;
+  sfxCheckbox.onchange = () => { selectedSfxOn = sfxCheckbox.checked; };
+  sfxField.append(sfxFieldLabel, sfxCheckbox);
+  modal.appendChild(sfxField);
+
+  const musicField = document.createElement('label');
+  musicField.className = 'settings-field';
+  musicField.htmlFor = 'settings-music';
+  const musicFieldLabel = document.createElement('span');
+  musicFieldLabel.className = 'settings-field-label';
+  musicFieldLabel.textContent = 'Music';
+  const musicCheckbox = document.createElement('input');
+  musicCheckbox.type = 'checkbox';
+  musicCheckbox.id = 'settings-music';
+  musicCheckbox.name = 'music';
+  musicCheckbox.checked = selectedMusicOn;
+  musicCheckbox.onchange = () => { selectedMusicOn = musicCheckbox.checked; };
+  musicField.append(musicFieldLabel, musicCheckbox);
+  modal.appendChild(musicField);
+
+  const volumeField = document.createElement('label');
+  volumeField.className = 'settings-field';
+  volumeField.htmlFor = 'settings-volume';
+  const volumeFieldLabel = document.createElement('span');
+  volumeFieldLabel.className = 'settings-field-label';
+  volumeFieldLabel.textContent = 'Volume';
+  const volumeSlider = document.createElement('input');
+  volumeSlider.type = 'range';
+  volumeSlider.min = '0';
+  volumeSlider.max = '1';
+  volumeSlider.step = '0.05';
+  volumeSlider.className = 'settings-slider';
+  volumeSlider.id = 'settings-volume';
+  volumeSlider.name = 'volume';
+  volumeSlider.value = String(selectedVolume);
+  volumeSlider.oninput = () => { selectedVolume = parseFloat(volumeSlider.value); };
+  volumeField.append(volumeFieldLabel, volumeSlider);
+  modal.appendChild(volumeField);
+
   const buttons = document.createElement('div');
   buttons.className = 'settings-buttons';
 
@@ -173,6 +226,9 @@ export function showSettings(onClose: () => void): void {
   saveBtn.onclick = () => {
     setPieceSet(selectedPieceSet);
     setBoardTheme(selectedBoardTheme);
+    setSfxOn(selectedSfxOn);
+    setMusicOn(selectedMusicOn);
+    setVolume(selectedVolume);
     document.removeEventListener('keydown', onKeydown);
     overlay.remove();
     onClose();
