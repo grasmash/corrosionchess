@@ -86,6 +86,25 @@ it('degraded single-cell class 2 still promotes to class 3 at owner edge', () =>
   expect(s.corrosions[0].cls).toBe(3);
 });
 
+it('class 1 spawned directly on enemy edge promotes on its first moving phase, not vanishes', () => {
+  const s = mk();
+  s.corrosions = [unit({ cells: [fromAlg('d8', 8)], bornRound: s.round - 1 })];
+  corrosionPhase(s);
+  const u = s.corrosions[0];
+  expect(u).toBeDefined();
+  expect(u.cls).toBe(2);
+  expect(u.dir).toBe(-1);
+  expect(u.cells.sort((a, b) => a - b)).toEqual([fromAlg('d7', 8), fromAlg('d8', 8)]);
+});
+
+it('tier2 disabled: class 1 spawned directly on enemy edge fizzles instead of vanishing silently', () => {
+  const s = mk(false);
+  s.corrosions = [unit({ cells: [fromAlg('d8', 8)], bornRound: s.round - 1 })];
+  corrosionPhase(s);
+  expect(s.corrosions).toEqual([]);
+  expect(s.log.some(e => e.text.includes('fizzles'))).toBe(true);
+});
+
 it('12x12: promotions use true board edges', () => {
   const s = newGame({ tier1: true, tier2: true, tier3: true, bigBoard: true });
   s.board = s.board.map(() => null);

@@ -114,7 +114,22 @@ export function corrosionPhase(s: GameState): void {
       const rank = rankOf(c, size);
       const newRank = rank + u.dir;
       if (u.cls !== 3 && (newRank < 0 || newRank >= size)) {
-        // dropped — off-board guard for cls 1/2 (Task 7 handles promotion)
+        // A cls-1 cell can be spawned directly onto the enemy edge rank
+        // (a piece capturing away from a square it holds on the opponent's
+        // back rank spawns corrosion there). On its first moving phase its
+        // "next rank" is off-board even though it never actually advanced
+        // onto the edge this phase — hold it in place instead of dropping
+        // it, so step 8's promoteCls1 pass (which only requires the cell to
+        // already be sitting on enemyEdgeRank) can promote or fizzle it.
+        // cls-2 cannot reach this branch: its dir already points home (away
+        // from the enemy edge) by the time it's cls 2, so it only ever runs
+        // off-board here on its OWN edge, where promotion already fires by
+        // landing on ownerEdgeRank (step 9), not via this off-board guard.
+        if (u.cls === 1 && rank === enemyEdgeRank(u.color, size)) {
+          newCells.push(c);
+          continue;
+        }
+        // dropped — off-board guard for any other cls 1/2 cell
         continue;
       }
       const niu = c + u.dir * size;
