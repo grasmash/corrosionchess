@@ -36,12 +36,14 @@ check/checkmate/stalemate) on top of this:
   back toward its owner's side.
 - **Class 3 (Tier 3):** a class-2 unit that returns to its owner's edge
   collapses into a single **class 3** — rendered red, hostile to *everyone*
-  including its own side (kings still immune), and immortal: it bounces off
-  each edge and keeps marching forever. Every square it leaves turns
-  **purple**; purple squares are lethal to any other corrosion that enters
-  them and illegal for pieces to move onto or through (knights may jump over
-  purple, just not land on it) — except a king, which may step onto a purple
-  square safely and permanently cleanses it on the way out.
+  including its own side (kings still immune). It never fades on its own and
+  bounces off each edge forever, but is consumed when it strikes a non-king
+  piece (its purple trail remains); either king may capture it for free. This
+  makes sacrificing a piece to remove a class 3 a core tactic. Every square it
+  leaves turns **purple**; purple squares are lethal to any other corrosion
+  that enters them and illegal for pieces to move onto or through (knights may
+  jump over purple, just not land on it) — except a king, which may step onto
+  a purple square safely and permanently cleanses it on the way out.
 - Each tier requires the one below it; disabling a tier just means the
   corrosion that would have been promoted is removed instead.
 
