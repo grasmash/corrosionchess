@@ -15,6 +15,8 @@ import type { SetupResult } from './ui/setup';
 import { renderHud, pickPromotion } from './ui/hud';
 import type { NetStatus } from './ui/hud';
 import { showBotSelect } from './ui/botselect';
+import { showSplash } from './ui/splash';
+import { applyPieceSet, currentPieceSet } from './ui/piecesets';
 import { copyText } from './ui/clipboard';
 import { newGame, applyMove } from './engine/game';
 import { legalMoves, inCheck } from './engine/legal';
@@ -68,19 +70,21 @@ function start(): void {
     return;
   }
 
-  showSetup(result => {
-    if (result.mode === 'host') {
-      startHostGame(result.config);
-    } else if (result.mode === 'bot') {
-      showBotSelect(
-        persona => startBotGame(result.config, persona),
-        () => start(),
-      );
-    } else {
-      // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
-      // 'join' is intercepted by start() above before showSetup() ever runs.
-      startGame(result);
-    }
+  showSplash(mode => {
+    showSetup(result => {
+      if (result.mode === 'host') {
+        startHostGame(result.config);
+      } else if (result.mode === 'bot') {
+        showBotSelect(
+          persona => startBotGame(result.config, persona),
+          () => start(),
+        );
+      } else {
+        // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
+        // 'join' is intercepted by start() above before showSetup() ever runs.
+        startGame(result);
+      }
+    }, mode);
   });
 }
 
@@ -778,6 +782,9 @@ function startBotGame(config: Config, persona: Persona): void {
   (window as unknown as { __cg: ReturnType<CgBoardView['api']> }).__cg = (view as unknown as CgBoardView).api();
 }
 
+// Apply the persisted piece set once, before any board mounts, so the very
+// first render already shows the right sprites instead of a cburnett flash.
+applyPieceSet(currentPieceSet());
 start();
 
 // --- Dev-only tools: eyeball corrosion overlay rendering (marching,

@@ -1,5 +1,6 @@
 import type { Color, GameState, PieceType } from '../engine/types';
 import { copyText } from './clipboard';
+import { showSettings } from './settings';
 
 const PROMOTION_CHOICES: { type: PieceType; label: string }[] = [
   { type: 'q', label: 'Queen' },
@@ -173,6 +174,16 @@ export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {})
   newGameBtn.textContent = 'New game';
   newGameBtn.onclick = () => opts.onNewGame?.();
   actions.appendChild(newGameBtn);
+
+  const settingsBtn = document.createElement('button');
+  settingsBtn.className = 'btn btn-secondary hud-settings-btn';
+  settingsBtn.textContent = '⚙';
+  settingsBtn.setAttribute('aria-label', 'Settings');
+  // The piece-set choice takes effect immediately (Save -> setPieceSet ->
+  // applyPieceSet rewrites the injected stylesheet), so a mounted board
+  // re-skins live with no re-render needed here.
+  settingsBtn.onclick = () => showSettings(() => {});
+  actions.appendChild(settingsBtn);
 
   if (opts.isHost && opts.inviteUrl) {
     const inviteUrl = opts.inviteUrl;

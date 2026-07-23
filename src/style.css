@@ -1320,3 +1320,204 @@ input[type='text'] {
   font-weight: 700;
   letter-spacing: 0.1em;
 }
+
+/* --- SPLASH (plan 004): full-viewport home screen replacing the bare setup
+ * card as the landing view. `#app` is normally a centered flex column with
+ * padding (see the top of this file) -- these rules take it edge-to-edge
+ * for the splash screen only, without touching `#app`'s own layout rules
+ * (which the game/setup screens still rely on). --- */
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  background-image:
+    linear-gradient(rgba(20, 18, 16, 0.2), rgba(20, 18, 16, 0.85)),
+    url('/art/hero.png');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Portrait/near-square viewports: swap to the tall crop, scrim weighted
+ * toward the top (title/buttons live in the upper portion there too). */
+@media (max-aspect-ratio: 1/1) {
+  .splash-screen {
+    background-image:
+      linear-gradient(rgba(20, 18, 16, 0.55), rgba(20, 18, 16, 0.85) 60%),
+      url('/art/hero-tall.png');
+    align-items: flex-start;
+    padding-top: 12vh;
+  }
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 480px;
+  padding: 3rem 2.5rem;
+}
+
+.splash-mark {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.splash-title {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  text-shadow: 0 0 18px rgba(129, 182, 76, 0.55), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.splash-tagline {
+  margin: 0 0 1.25rem;
+  font-size: 1.05rem;
+  color: var(--text-dim);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.splash-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.splash-buttons .btn {
+  width: 100%;
+}
+
+.splash-settings-btn {
+  margin-top: 1rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .splash-content {
+    animation: splash-fade-in 400ms ease-out;
+  }
+}
+
+@keyframes splash-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 520px) {
+  .splash-content {
+    padding: 2rem 1.5rem;
+    max-width: 100%;
+  }
+
+  .splash-title {
+    font-size: 1.6rem;
+  }
+}
+
+/* --- SETTINGS (plan 004): piece-set picker modal, shares the promotion
+ * modal's overlay/card shell (`.promotion-modal-overlay` / `.promotion-modal`
+ * from the promotion section above). --- */
+
+.settings-modal {
+  width: min(90vw, 380px);
+}
+
+.settings-preview {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  align-self: stretch;
+}
+
+.settings-preview-row {
+  display: flex;
+}
+
+.settings-preview-square {
+  flex: 1 1 0;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-preview-square--light {
+  background: #ebecd0;
+}
+
+.settings-preview-square--dark {
+  background: #779556;
+}
+
+.settings-preview-square piece {
+  position: relative;
+  display: block;
+  width: 82%;
+  height: 82%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.settings-preview-img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  align-self: stretch;
+}
+
+.settings-field-label {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.settings-select {
+  flex: 1 1 auto;
+  max-width: 220px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+}
+
+.settings-buttons {
+  display: flex;
+  gap: 0.6rem;
+  align-self: stretch;
+}
+
+.settings-buttons .btn {
+  flex: 1 1 0;
+}
+
+.hud-settings-btn {
+  flex: 0 0 auto;
+  width: 2.4rem;
+  padding: 0.7rem 0;
+  font-size: 1rem;
+}

@@ -44,8 +44,15 @@ export function describeConfig(c: Config): string {
  * Renders the setup screen into `#app` and invokes `onStart` once the user
  * picks a mode. Enforces the tier dependency chain (tier N requires tier
  * N-1 checked) directly in the checkbox change handlers, not just visually.
+ *
+ * `initialMode` (plan 004: splash routes here as its "step 2" config card)
+ * preselects which of the three buttons is styled `.btn-primary` -- all
+ * three remain fully clickable regardless, this only visually highlights the
+ * mode the player already chose on the splash screen. Omitting it keeps the
+ * original default (hotseat primary), so every pre-splash caller is
+ * unaffected.
  */
-export function showSetup(onStart: (r: SetupResult) => void): void {
+export function showSetup(onStart: (r: SetupResult) => void, initialMode: 'hotseat' | 'host' | 'bot' = 'hotseat'): void {
   const el = document.querySelector<HTMLDivElement>('#app');
   if (!el) throw new Error('showSetup: #app element not found');
   el.innerHTML = '';
@@ -122,18 +129,22 @@ export function showSetup(onStart: (r: SetupResult) => void): void {
     };
   }
 
+  function modeClass(mode: 'hotseat' | 'host' | 'bot'): string {
+    return `btn ${mode === initialMode ? 'btn-primary' : 'btn-secondary'}`;
+  }
+
   const hotseatBtn = document.createElement('button');
-  hotseatBtn.className = 'btn btn-primary';
+  hotseatBtn.className = modeClass('hotseat');
   hotseatBtn.textContent = 'Play Hotseat';
   hotseatBtn.onclick = () => onStart({ config: currentConfig(), mode: 'hotseat' });
 
   const botBtn = document.createElement('button');
-  botBtn.className = 'btn btn-secondary';
+  botBtn.className = modeClass('bot');
   botBtn.textContent = 'Play vs Bot';
   botBtn.onclick = () => onStart({ config: currentConfig(), mode: 'bot' });
 
   const onlineBtn = document.createElement('button');
-  onlineBtn.className = 'btn btn-secondary';
+  onlineBtn.className = modeClass('host');
   onlineBtn.textContent = 'Create Online Game';
   onlineBtn.onclick = () => onStart({ config: currentConfig(), mode: 'host' });
 
