@@ -1,0 +1,22 @@
+{
+  "name": "dinosaurs",
+  "stylePhrase": "playful natural-history museum-diorama 3D game asset render, high detail, dramatic rim lighting, consistent top-left lighting",
+  "sides": {
+    "w": {
+      "label": "fossil-bone dinosaur",
+      "palette": "sandy tan and cream fossil-bone texture, warm amber highlights, desert palette"
+    },
+    "b": {
+      "label": "jungle dinosaur",
+      "palette": "deep jungle green scaled hide, dark emerald and moss tones"
+    }
+  },
+  "pieces": {
+    "k": "a {SIDE} tyrannosaurus rex head crest as a crown",
+    "q": "an elegant {SIDE} long-necked brachiosaurus curve, more slender than the king",
+    "r": "a stony volcano mesa rock tower colored like a {SIDE}",
+    "b": "a {SIDE} raptor-claw mitre shape",
+    "n": "a {SIDE} triceratops head profile with a brow horn",
+    "p": "a small {SIDE} dinosaur egg dome resting on a nest base"
+  }
+}

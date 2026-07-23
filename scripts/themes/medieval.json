@@ -1,0 +1,22 @@
+{
+  "name": "medieval",
+  "stylePhrase": "painterly medieval 3D game asset render, weathered metal and cloth textures, dramatic rim lighting, consistent top-left lighting",
+  "sides": {
+    "w": {
+      "label": "silver order",
+      "palette": "shining polished silver plate armor, royal blue heraldic banners and cloth trim, gold filigree accents"
+    },
+    "b": {
+      "label": "iron order",
+      "palette": "blackened weathered iron armor, crimson heraldic banners and cloth trim, dull dark rivets"
+    }
+  },
+  "pieces": {
+    "k": "an armored {SIDE} monarch",
+    "q": "an armored {SIDE} monarch's consort, more slender than the king",
+    "r": "a fortified stone castle keep tower flying {SIDE} banners",
+    "b": "a cloaked {SIDE} friar in a hooded robe",
+    "n": "an armored {SIDE} warhorse in barding, mounted knight",
+    "p": "a small {SIDE} squire wearing a simple helm"
+  }
+}
