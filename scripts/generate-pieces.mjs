@@ -64,7 +64,8 @@ function buildPrompt(theme, key) {
 // ---- CLI ----
 const args = process.argv.slice(2);
 const themeFile = args.find(a => !a.startsWith('--'));
-const only = (args.find(a => a.startsWith('--only'))?.split('=')[1] ?? args[args.indexOf('--only') + 1])?.split(',');
+const onlyFlagIdx = args.indexOf('--only');
+const only = (args.find(a => a.startsWith('--only='))?.split('=')[1] ?? (onlyFlagIdx >= 0 ? args[onlyFlagIdx + 1] : undefined))?.split(',');
 const force = args.includes('--force');
 const outFlagIdx = args.indexOf('--out');
 if (!themeFile) {
