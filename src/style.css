@@ -211,6 +211,48 @@ h1 {
   background-size: calc(100% / 6) calc(100% / 6);
 }
 
+/*
+ * Plan 006 ("Corroded" theme) texture overlay: `--board-dark-tex` /
+ * `--board-light-tex` are `url(...)` (corroded) or `none` (every other
+ * theme) -- see boardthemes.ts's applyBoardTheme -- so this rule is a
+ * complete no-op except when corroded is active.
+ *
+ * Chosen approach (documented per the plan's step 1): a SINGLE tiled layer
+ * using the dark variant's texture (it carries the acid-green veins),
+ * blended over the whole board via `mix-blend-mode: multiply` so cracks
+ * read on every square, while the conic-gradient checker above still
+ * differentiates light vs. dark via color underneath. True per-square
+ * light-vs-dark texturing would need a mask-image shaped exactly like the
+ * checker layered inside cg-board -- rejected as unnecessary risk right next
+ * to the corrosion overlay/piece rendering that also lives in this element.
+ * Lives on `cg-board::before` (cg-board is already `position: absolute` per
+ * chessground.base.css, so no positioning change needed) rather than a new
+ * DOM node: `::before` paints below cg-board's real children (square/piece
+ * elements, all added to the DOM after it) and below
+ * `.corrosion-overlay-layer` (a later sibling of cg-board, appended by
+ * overlays.ts -- see its own doc comment -- always on top), so no
+ * cgboard.ts/overlays.ts changes are needed and nothing gameplay-relevant is
+ * ever obscured.
+ */
+.board-wrap cg-board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--board-dark-tex, none);
+  background-repeat: repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}
+
+.board-wrap[data-size='8'] cg-board::before {
+  background-size: calc(100% / 8) calc(100% / 8);
+}
+
+.board-wrap[data-size='12'] cg-board::before {
+  background-size: calc(100% / 12) calc(100% / 12);
+}
+
 /* chessground.brown.css's move/last-move/selected highlights are tuned for
  * the brown palette; recolor them to the chess.com-style yellow-green so
  * they still read clearly against the board (plan 005: --board-lastmove is
@@ -1847,6 +1889,95 @@ input[type='text'] {
   width: 2.4rem;
   padding: 0.7rem 0;
   font-size: 1rem;
+}
+
+/* --- CORRODED THEME game ambience + legibility (plan 006) ---
+ * `data-boardtheme` is stamped on <body> by boardthemes.ts's applyBoardTheme
+ * (set once at boot from the persisted/default choice, and again on Save in
+ * the settings modal) -- every rule below is scoped to
+ * `body[data-boardtheme='corroded']` so every other theme keeps today's flat
+ * page exactly as-is. */
+
+/* Fixed, blurred, heavily darkened hero backdrop -- reuses the splash
+ * screen's own hero.png (no separate "ambience" asset needed per the plan's
+ * OPTIONAL note: the blur+darken already delivers the smoky-void mood
+ * without a second generated image). Lives on `body::before` rather than
+ * directly on `body`'s own background so the blur `filter` doesn't also
+ * blur `#app`'s real content (filter on body would blur its descendants
+ * too) -- `position: fixed` keys it to the viewport regardless of page
+ * scroll/height, sitting behind everything via `z-index: -1` since `#app`
+ * has no explicit z-index/stacking context of its own to fight. */
+body[data-boardtheme='corroded']::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('/art/hero.png');
+  background-size: cover;
+  background-position: center;
+  filter: blur(12px) brightness(0.35);
+  /* Slightly oversized so the blur's own edge-softening never reveals a
+   * sliver of unblurred viewport edge. */
+  margin: -20px;
+}
+
+/* Vignette on top of the blurred hero -- a second fixed layer rather than
+ * baking it into the same ::before, so the blur filter above only ever
+ * applies to the photo, never re-blurring an already-soft radial-gradient
+ * (stacking two different `filter`s on one element is unnecessary here). */
+body[data-boardtheme='corroded']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(10, 8, 6, 0.65) 100%);
+}
+
+/* Sidebar/player-bar chrome: a touch of translucency + blur so the key-art
+ * backdrop reads through slightly, with a solid fallback for browsers
+ * without `backdrop-filter` support (the `@supports` block below). */
+body[data-boardtheme='corroded'] .sidebar-panel {
+  background: rgba(38, 36, 33, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+body[data-boardtheme='corroded'] .player-bar {
+  background: rgba(38, 36, 33, 0.55);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  body[data-boardtheme='corroded'] .sidebar-panel {
+    background: rgba(28, 26, 24, 0.97);
+  }
+
+  body[data-boardtheme='corroded'] .player-bar {
+    background: rgba(28, 26, 24, 0.75);
+  }
+}
+
+/* Legibility pass: cburnett's black pieces (and generated dark-toned sets)
+ * can sink into the corroded board's near-black dark squares -- a dual
+ * drop-shadow (dark to separate from light backgrounds, a faint light rim to
+ * separate from dark ones) keeps every piece readable regardless of which
+ * square color it sits on, without touching piece art itself. Targets
+ * `.cg-wrap piece` directly (chessgroundx's own selector -- see
+ * pieces-cburnett.css) so this covers cburnett and every generated set the
+ * same way. */
+body[data-boardtheme='corroded'] .cg-wrap piece {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.25));
+}
+
+/* Coordinate labels: the default `rgba(230, 230, 225, 0.65)` (see the
+ * `.cg-wrap coords` rule near the top of this file) is tuned against the
+ * bright default themes -- bump brighter/more opaque so labels stay legible
+ * against the dark corroded board. */
+body[data-boardtheme='corroded'] .cg-wrap coords {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* --- VFX Lab (Plan 001 iteration, DEV-only) --- */

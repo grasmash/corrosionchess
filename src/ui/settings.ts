@@ -21,7 +21,20 @@ function buildPreviewRow(roles: readonly string[], setId: string, rowIndex: numb
     // the live board only re-skins on Save (see `setBoardTheme` below) --
     // if this read the CSS vars instead, changing the dropdown pre-Save
     // would re-skin the live board underneath the modal too.
-    square.style.backgroundColor = (rowIndex + colIndex) % 2 === 0 ? theme.light : theme.dark;
+    const isDark = (rowIndex + colIndex) % 2 !== 0;
+    square.style.backgroundColor = isDark ? theme.dark : theme.light;
+    // Plan 006: same technique as the live board's cg-board::before overlay
+    // (style.css) -- the dark texture blended over the flat color -- but
+    // inline, and only on dark squares here (the preview is small enough
+    // that a per-square image reads cleanly, unlike the live board where a
+    // single full-board blended layer was the simpler/safer choice). Themes
+    // without `darkTex` leave `backgroundImage` unset, so this is a no-op
+    // for every non-corroded theme.
+    if (isDark && theme.darkTex) {
+      square.style.backgroundImage = `url(${theme.darkTex})`;
+      square.style.backgroundSize = 'cover';
+      square.style.backgroundBlendMode = 'multiply';
+    }
 
     if (isBuiltin) {
       // Reuses pieces-cburnett.css's own selectors (`.cg-wrap piece.<role>-

@@ -13,6 +13,7 @@ fully before starting, honor its STOP conditions, and update your row when done.
 | 003  | Bot personas — chess.com-style roster with personalities | P1 | L | 001, 002 | DONE |
 | 004  | Splash home screen + piece-set picker | P1 | M | 001, 002, 003 | DONE |
 | 005  | Board color themes in the settings modal | P1 | S | 004 | DONE |
+| 006  | "Corroded" game theme — key-art look in gameplay | P1 | M | 005, VFX iteration | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with rationale)
 

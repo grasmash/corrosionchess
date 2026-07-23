@@ -22,7 +22,7 @@ beforeEach(() => {
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 
-it('manifest lists green first (default), unique ids, and valid hex colors', () => {
+it('manifest lists green first (matches style.css :root fallback), unique ids, and valid hex colors', () => {
   const ids = BOARD_THEMES.map(t => t.id);
   expect(new Set(ids).size).toBe(ids.length);
   expect(ids[0]).toBe('green');
@@ -32,17 +32,32 @@ it('manifest lists green first (default), unique ids, and valid hex colors', () 
     expect(typeof t.lastmove).toBe('string');
     expect(t.lastmove.length).toBeGreaterThan(0);
   }
-  for (const id of ['green', 'brown', 'blue', 'purple', 'walnut', 'slate']) {
+  for (const id of ['green', 'brown', 'blue', 'purple', 'walnut', 'slate', 'corroded']) {
     expect(ids).toContain(id);
   }
 });
 
-it('currentBoardTheme defaults to green when nothing is stored', () => {
-  expect(currentBoardTheme()).toBe('green');
+it('corroded theme (plan 006 default) carries both texture URLs; other themes carry neither', () => {
+  const corroded = BOARD_THEMES.find(t => t.id === 'corroded')!;
+  expect(corroded.lightTex).toBe('/vfx/board/stone-light.png');
+  expect(corroded.darkTex).toBe('/vfx/board/stone-dark.png');
+  for (const t of BOARD_THEMES.filter(t => t.id !== 'corroded')) {
+    expect(t.lightTex).toBeUndefined();
+    expect(t.darkTex).toBeUndefined();
+  }
 });
 
-it('currentBoardTheme falls back to green on an unknown/garbage stored value', () => {
+it('currentBoardTheme defaults to corroded when nothing is stored (plan 006: new-user default)', () => {
+  expect(currentBoardTheme()).toBe('corroded');
+});
+
+it('currentBoardTheme falls back to corroded on an unknown/garbage stored value', () => {
   localStorage.setItem('boardtheme', 'not-a-real-theme');
+  expect(currentBoardTheme()).toBe('corroded');
+});
+
+it('currentBoardTheme respects an existing persisted green choice (plan 006: default change does not migrate prior users)', () => {
+  localStorage.setItem('boardtheme', 'green');
   expect(currentBoardTheme()).toBe('green');
 });
 
