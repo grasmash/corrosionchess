@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat e0364cb..HEAD -- src/main.ts src/ui/settings.ts src/engine/notation.ts vite.config.ts`
+> **Drift check (run first)**: `git diff --stat 54be926..HEAD -- src/main.ts src/ui/settings.ts src/engine/notation.ts vite.config.ts`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -18,7 +18,10 @@
 - **Risk**: MED (autoplay policy + PWA caching are the tricky parts)
 - **Depends on**: none (plans 001–007 are DONE)
 - **Category**: direction
-- **Planned at**: commit `e0364cb`, 2026-07-23
+- **Planned at**: commit `54be926`, 2026-07-23 (refreshed same day: `src/main.ts` gained a
+  service-worker auto-reload block after `start()` at the bottom of the file — commit
+  `b4bd647`. Step 2's `pointerdown`/`click` listeners go NEAR that block, after it; do
+  not modify it.)
 
 ## Why this matters
 
