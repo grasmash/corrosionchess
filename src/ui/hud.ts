@@ -47,6 +47,74 @@ export interface HudOptions {
    * they can re-share it if a guest needs to reconnect mid-game. */
   isHost?: boolean;
   inviteUrl?: string;
+  /** Bot mode only: renders a persona header + chat bubble panel above the
+   * move log. Omit entirely for hotseat/online games. */
+  persona?: { name: string; avatar: string; rating: number };
+  /** Quip lines in chronological order; only the most recent 3 are shown. */
+  chatLog?: string[];
+  /** Shows a "typing" bubble while the bot's move is being computed. */
+  thinking?: boolean;
+}
+
+/**
+ * Persona header (avatar + name + rating) and the last 3 quip lines
+ * rendered as chess.com-style speech bubbles, plus a "typing" bubble while
+ * `thinking` is true. Only invoked when `HudOptions.persona` is set.
+ */
+function renderBotChatPanel(
+  persona: { name: string; avatar: string; rating: number },
+  chatLog: string[],
+  thinking: boolean,
+): HTMLDivElement {
+  const panel = document.createElement('div');
+  panel.className = 'bot-chat-panel';
+
+  const header = document.createElement('div');
+  header.className = 'bot-chat-header';
+
+  const avatarWrap = document.createElement('div');
+  avatarWrap.className = 'bot-chat-avatar-wrap';
+  const img = document.createElement('img');
+  img.className = 'bot-chat-avatar';
+  img.src = persona.avatar;
+  img.alt = persona.name;
+  img.onerror = () => {
+    const fallback = document.createElement('div');
+    fallback.className = 'avatar-fallback avatar-fallback--sm';
+    fallback.textContent = persona.name.charAt(0).toUpperCase();
+    img.replaceWith(fallback);
+  };
+  avatarWrap.appendChild(img);
+
+  const names = document.createElement('div');
+  const name = document.createElement('div');
+  name.className = 'bot-chat-name';
+  name.textContent = persona.name;
+  const rating = document.createElement('div');
+  rating.className = 'bot-chat-rating';
+  rating.textContent = `Rating ${persona.rating}`;
+  names.append(name, rating);
+
+  header.append(avatarWrap, names);
+  panel.appendChild(header);
+
+  const chat = document.createElement('div');
+  chat.className = 'bot-chat-log';
+  for (const line of chatLog.slice(-3)) {
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = line;
+    chat.appendChild(bubble);
+  }
+  if (thinking) {
+    const typing = document.createElement('div');
+    typing.className = 'chat-bubble chat-bubble--typing';
+    typing.textContent = '···';
+    chat.appendChild(typing);
+  }
+  panel.appendChild(chat);
+
+  return panel;
 }
 
 /**
@@ -78,6 +146,10 @@ export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {})
     banner.className = 'hud-result-banner';
     banner.textContent = resultText(gs);
     body.appendChild(banner);
+  }
+
+  if (opts.persona) {
+    body.appendChild(renderBotChatPanel(opts.persona, opts.chatLog ?? [], !!opts.thinking));
   }
 
   const log = document.createElement('div');

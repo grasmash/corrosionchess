@@ -10,7 +10,7 @@ fully before starting, honor its STOP conditions, and update your row when done.
 |------|-------|----------|--------|------------|--------|
 | 001  | Animated corrosion VFX (spawn/march/dissolve, piece corrode-out, purple void) | P1 | M | — | DONE |
 | 002  | Full move log in chess notation + missing corrosion events | P1 | M | — | DONE |
-| 003  | Bot personas — chess.com-style roster with personalities | P1 | L | 001, 002 | TODO |
+| 003  | Bot personas — chess.com-style roster with personalities | P1 | L | 001, 002 | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with rationale)
 

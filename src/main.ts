@@ -14,14 +14,18 @@ import { showSetup, encodeConfig, decodeConfig, describeConfig } from './ui/setu
 import type { SetupResult } from './ui/setup';
 import { renderHud, pickPromotion } from './ui/hud';
 import type { NetStatus } from './ui/hud';
+import { showBotSelect } from './ui/botselect';
 import { copyText } from './ui/clipboard';
 import { newGame, applyMove } from './engine/game';
-import { legalMoves } from './engine/legal';
+import { legalMoves, inCheck } from './engine/legal';
 import { corrosionPhase } from './engine/corrosion';
 import { sq, offsetOf, forwardDir } from './engine/board';
 import type { Color, Config, GameState, Move } from './engine/types';
 import { host, join, teardownPeer } from './net/peer';
 import type { NetMsg, Session } from './net/peer';
+import { chooseBotMove } from './ai/bot';
+import { choosePersonaMove, pickQuip } from './ai/personas';
+import type { Persona, QuipEvent } from './ai/personas';
 
 const appEl = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -67,9 +71,14 @@ function start(): void {
   showSetup(result => {
     if (result.mode === 'host') {
       startHostGame(result.config);
+    } else if (result.mode === 'bot') {
+      showBotSelect(
+        persona => startBotGame(result.config, persona),
+        () => start(),
+      );
     } else {
-      // Only 'hotseat' and 'host' are reachable from showSetup: 'join' is
-      // intercepted by start() above before showSetup() ever runs.
+      // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
+      // 'join' is intercepted by start() above before showSetup() ever runs.
       startGame(result);
     }
   });
@@ -588,6 +597,178 @@ function startGame(setup: SetupResult): void {
       }
     );
   }
+}
+
+/** Returns true if applying `move` to `s` (whose mover is `s.turn`) captures
+ * an enemy piece -- a plain capture or en passant. Mirrors the equivalent
+ * check inside engine/game.ts's applyMove (not exported -- bot.ts and
+ * engine/** are frozen for this plan), used here purely to decide which quip
+ * fires, not to affect game legality. */
+function moveIsCapture(s: GameState, m: Move): boolean {
+  const mover = s.board[m.from];
+  if (!mover) return false;
+  const dest = s.board[m.to];
+  const isEnPassant = mover.type === 'p' && s.epSquare === m.to && !dest &&
+    (m.from % s.size) !== (m.to % s.size);
+  return (!!dest && dest.color !== mover.color) || isEnPassant;
+}
+
+/** Bot flow: human is always White, the persona is always Black (v1). Reuses
+ * the same board/HUD render wiring as startGame's hotseat flow, plus a chat
+ * panel fed by a diff between the state before/after each applied move. */
+function startBotGame(config: Config, persona: Persona): void {
+  const humanColor: Color = 'w';
+  const botColor: Color = 'b';
+  let state: GameState = newGame(config);
+
+  const { boardEl, hudEl, topBar, bottomBar } = buildGameLayout(config);
+  renderPlayerBar(topBar, botColor, persona.name);
+  renderPlayerBar(bottomBar, humanColor, `You (${colorLabel(humanColor)})`);
+
+  const view = createBoardView(state.size);
+  view.mount(boardEl);
+
+  // See the matching comment in startGame/mountOnlineGame -- startBotGame is
+  // itself re-invoked fresh via showSetup/showBotSelect, so this always
+  // starts null.
+  let prevState: GameState | null = null;
+  let botThinking = false;
+  const chatLog: string[] = [];
+
+  function pushQuip(ev: QuipEvent, alwaysShow = false): void {
+    // ~30% chance to stay silent on non-result events so the chat doesn't spam.
+    if (!alwaysShow && Math.random() < 0.3) return;
+    chatLog.push(pickQuip(persona, ev));
+  }
+
+  function canHumanMove(): boolean {
+    return !state.result && state.turn === humanColor && !botThinking;
+  }
+
+  function render(): void {
+    view.setState(state, canHumanMove() ? computeDests(state) : new Map());
+    renderOverlays(boardEl, view, state, prevState);
+    prevState = state;
+    renderHud(hudEl, state, {
+      youAre: humanColor,
+      onNewGame: start,
+      persona: { name: persona.name, avatar: persona.avatar, rating: persona.rating },
+      chatLog,
+      thinking: botThinking,
+    });
+  }
+
+  // Priority when multiple things happened on one move: result > corrosion
+  // kill > check > capture > corrosion spawn. `mover` is who just moved.
+  function fireQuipsForMove(before: GameState, after: GameState, mover: Color, move: Move): void {
+    if (after.result && !before.result) {
+      if (after.result.winner === botColor) pushQuip('botWins', true);
+      else if (after.result.winner === humanColor) pushQuip('botLoses', true);
+      return;
+    }
+
+    const newLogText = after.log.slice(before.log.length).map(e => e.text);
+    if (newLogText.some(t => t.startsWith('Corrosion destroys '))) {
+      pushQuip('corrosionKills');
+      return;
+    }
+
+    if (inCheck(after, humanColor)) {
+      pushQuip('check');
+      return;
+    }
+
+    if (moveIsCapture(before, move)) {
+      pushQuip(mover === botColor ? 'botCaptures' : 'botLosesPiece');
+      return;
+    }
+
+    if (after.corrosions.some(u => u.id >= before.nextId)) {
+      pushQuip('corrosionSpawns');
+    }
+  }
+
+  function scheduleBotMove(): void {
+    botThinking = true;
+    // A little idle flavor while the "typing" indicator is up, independent
+    // of the move-diff-triggered quips above.
+    if (Math.random() < 0.25) chatLog.push(pickQuip(persona, 'idle'));
+    render();
+
+    const rng = Math.random;
+    const thinkFloor = 300 + rng() * 900;
+    const startedAt = Date.now();
+
+    // The compute IS the delay when it's slow (level 3 can take ~1s) --
+    // don't stack a fixed sleep on top of a slow compute. Only pad up to
+    // thinkFloor if the compute finished fast.
+    let move: Move;
+    try {
+      move = choosePersonaMove(state, persona, rng);
+    } catch (err) {
+      console.error('choosePersonaMove threw; falling back to chooseBotMove(level 1):', err);
+      move = chooseBotMove(state, 1, rng);
+    }
+    const remaining = Math.max(0, thinkFloor - (Date.now() - startedAt));
+
+    setTimeout(() => {
+      const before = state;
+      let applied: Move = move;
+      let next: GameState;
+      try {
+        next = applyMove(state, move);
+      } catch (err) {
+        console.error('Persona produced an illegal move; falling back to chooseBotMove(level 1):', err);
+        try {
+          applied = chooseBotMove(state, 1, rng);
+          next = applyMove(state, applied);
+        } catch {
+          botThinking = false;
+          render();
+          return;
+        }
+      }
+      state = next;
+      botThinking = false;
+      fireQuipsForMove(before, state, botColor, applied);
+      render();
+    }, remaining);
+  }
+
+  function applyHumanMove(move: Move): void {
+    const before = state;
+    let next: GameState;
+    try {
+      next = applyMove(state, move);
+    } catch {
+      render(); // shouldn't happen: cg only offers dests we gave it
+      return;
+    }
+    state = next;
+    fireQuipsForMove(before, state, humanColor, move);
+    render();
+    if (!state.result) scheduleBotMove();
+  }
+
+  view.onMove((from, to) => {
+    if (!canHumanMove()) return;
+    const candidates = legalMoves(state, from).filter(m => m.to === to);
+    if (candidates.length === 0) return; // shouldn't happen: cg only offers dests we gave it
+
+    const needsPromotion = candidates.every(m => m.promotion);
+    if (needsPromotion) {
+      pickPromotion(humanColor).then(promotion => applyHumanMove({ from, to, promotion }));
+    } else {
+      applyHumanMove(candidates[0]);
+    }
+  });
+
+  pushQuip('start', true);
+  render();
+
+  // Expose the raw chessgroundx Api for manual verification only, matching
+  // the pattern in startGame/mountOnlineGame.
+  (window as unknown as { __cg: ReturnType<CgBoardView['api']> }).__cg = (view as unknown as CgBoardView).api();
 }
 
 start();

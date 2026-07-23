@@ -2,8 +2,12 @@ import type { Config } from '../engine/types';
 
 export interface SetupResult {
   config: Config;
-  mode: 'hotseat' | 'host' | 'join';
+  mode: 'hotseat' | 'host' | 'join' | 'bot';
   joinId?: string;
+  /** Set once a persona has been picked on the bot-select screen; absent for
+   * the initial `onStart({mode:'bot'})` fired by this screen's "Play vs Bot"
+   * button (main.ts shows the roster before this is known). */
+  personaId?: string;
 }
 
 /**
@@ -123,12 +127,17 @@ export function showSetup(onStart: (r: SetupResult) => void): void {
   hotseatBtn.textContent = 'Play Hotseat';
   hotseatBtn.onclick = () => onStart({ config: currentConfig(), mode: 'hotseat' });
 
+  const botBtn = document.createElement('button');
+  botBtn.className = 'btn btn-secondary';
+  botBtn.textContent = 'Play vs Bot';
+  botBtn.onclick = () => onStart({ config: currentConfig(), mode: 'bot' });
+
   const onlineBtn = document.createElement('button');
   onlineBtn.className = 'btn btn-secondary';
   onlineBtn.textContent = 'Create Online Game';
   onlineBtn.onclick = () => onStart({ config: currentConfig(), mode: 'host' });
 
-  buttons.append(hotseatBtn, onlineBtn);
+  buttons.append(hotseatBtn, botBtn, onlineBtn);
   wrap.appendChild(buttons);
 
   const rulesHint = document.createElement('p');
