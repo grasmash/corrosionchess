@@ -45,3 +45,71 @@ body {
 #status {
   font-size: 1.1rem;
 }
+
+/* Task 10: corrosion + purple overlay layer. Positioned/sized via inline
+ * styles computed from BoardView.squareEl() geometry in overlays.ts; these
+ * rules only carry the static visuals (colors, borders, badge chrome). */
+.corrosion-overlay-layer {
+  position: absolute;
+  pointer-events: none;
+}
+
+.corrosion-marker {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.corrosion-cell {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+}
+
+.corrosion-cell--w {
+  background: rgba(190, 255, 190, 0.55);
+}
+
+.corrosion-cell--b {
+  background: rgba(20, 90, 20, 0.55);
+}
+
+.corrosion-cell--cls3 {
+  background: rgba(255, 40, 40, 0.6);
+  border-color: rgba(0, 0, 0, 0.75);
+}
+
+.corrosion-purple {
+  position: absolute;
+  inset: 0;
+  background: rgba(128, 0, 160, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.corrosion-badge {
+  position: absolute;
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+  font-size: 0.6em;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.corrosion-badge--tl { top: 2px; left: 2px; }
+.corrosion-badge--tr { top: 2px; right: 2px; }
+.corrosion-badge--bl { bottom: 2px; left: 2px; }
+.corrosion-badge--br { bottom: 2px; right: 2px; }
+
+#dev-tools {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
