@@ -42,7 +42,17 @@ export const BOARD_THEMES: BoardTheme[] = [
   {
     id: 'corroded',
     label: 'Corroded',
-    light: '#3a3d3a',
+    // Lightened from the original #3a3d3a, and further than the first
+    // #4a4e4a pass (redesign follow-up): the dark stone texture's own
+    // luminance is very low (median ~21/255 -- it's meant to read as
+    // near-black), and `multiply` blending is MULTIPLICATIVE, so it crushes
+    // a modest light/dark gap down to single digits regardless (measured:
+    // #4a4e4a vs `dark` #1f2320 still only differed by ~7-15/255 once
+    // blended at the overlay's original 0.9 opacity -- not "obvious at a
+    // glance"). This wider gap against `dark` (#1f2320), combined with the
+    // overlay opacity coming down to 0.6 below (style.css), is tuned to
+    // clear ~40/255 post-blend -- see that rule's own comment for the math.
+    light: '#6e7268',
     dark: '#1f2320',
     lastmove: CORRODED_LASTMOVE,
     lightTex: '/vfx/board/stone-light.png',

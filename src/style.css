@@ -242,7 +242,21 @@ h1 {
   background-image: var(--board-dark-tex, none);
   background-repeat: repeat;
   mix-blend-mode: multiply;
-  opacity: 0.9;
+  /* Redesign follow-up: dropped from 0.9. `opacity` here composites this
+   * ENTIRE layer's multiply-blended output back over the plain checker
+   * underneath (`displayed = (1-opacity)*checker + opacity*multiply(checker,
+   * texture)`), so opacity is what controls how much of the checker's own
+   * light/dark contrast survives the multiply -- 0.9 was leaving only
+   * (1 - 0.9*(1 - textureLuminance/255)) of the original light/dark gap,
+   * and the dark stone texture's median luminance is only ~21/255, so that
+   * factor was crushing a modest color gap down to single digits (measured:
+   * ~7-15/255 after blending, nowhere near "obvious at a glance"). At 0.6,
+   * combined with boardthemes.ts's wider `light`/`dark` gap for 'corroded',
+   * this clears roughly a 40/255 post-blend difference while still reading
+   * as a textured, cracked surface (the bright acid-green veins, being much
+   * higher-luminance than the surrounding stone, still multiply through
+   * clearly at any of these opacities). */
+  opacity: 0.6;
 }
 
 .board-wrap[data-size='8'] cg-board::before {
@@ -1962,7 +1976,7 @@ body[data-boardtheme='corroded'] .player-bar {
 
 /* Legibility pass: cburnett's black pieces (and generated dark-toned sets)
  * can sink into the corroded board's near-black dark squares -- a dual
- * drop-shadow (dark to separate from light backgrounds, a faint light rim to
+ * drop-shadow (dark to separate from light backgrounds, a light rim to
  * separate from dark ones) keeps every piece readable regardless of which
  * square color it sits on, without touching piece art itself. Targets
  * `.cg-wrap piece` directly (chessgroundx's own selector -- see
@@ -1970,6 +1984,28 @@ body[data-boardtheme='corroded'] .player-bar {
  * same way. */
 body[data-boardtheme='corroded'] .cg-wrap piece {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.25));
+}
+
+/* Black pieces specifically (redesign follow-up): cburnett's black glyphs
+ * are `fill:#000; stroke:#000` (see pieces-cburnett.css's embedded SVGs --
+ * only a couple of internal detail lines are a light gray) -- i.e. by design
+ * they read via CONTRAST AGAINST A LIGHT BOARD, not via their own outline.
+ * On corroded's near-black squares that silhouette is functionally invisible
+ * -- the single-pixel rim above is far too subtle to fix it. `filter:
+ * drop-shadow` only cares about the shape's alpha channel, not its fill
+ * color, so stacking several progressively-larger, brighter drop-shadows
+ * builds a glowing outline around the whole silhouette regardless of the
+ * black fill underneath -- this replaces (doesn't add to) the base rule's
+ * drop-shadows for `.black` specifically, since the dark drop-shadow above
+ * is pointless on an already-black piece and would just waste a filter
+ * pass. Tinted faintly green (matching the theme's acid glow) rather than
+ * plain white so it reads as "the piece is lit by the corrosion" rather
+ * than an arbitrary halo. */
+body[data-boardtheme='corroded'] .cg-wrap piece.black {
+  filter:
+    drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 3px rgba(210, 255, 225, 0.9))
+    drop-shadow(0 0 5px rgba(140, 255, 180, 0.6));
 }
 
 /* Coordinate labels: the default `rgba(230, 230, 225, 0.65)` (see the
