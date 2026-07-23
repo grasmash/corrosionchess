@@ -8,9 +8,8 @@ export interface PieceSet {
 
 /**
  * Only sets with a COMPLETE 12-PNG folder under `public/pieces/<id>/` belong
- * here. `christmas`, `greek`, `aliens`, `medieval`, `dinosaurs` are missing
- * art (pipeline blocked) -- adding one is a one-line change once its folder
- * is complete, but do not list it before then.
+ * here -- adding a new set is a one-line change once its folder is complete,
+ * but do not list one before then.
  */
 export const PIECE_SETS: PieceSet[] = [
   { id: 'classic', label: 'Classic', builtin: true },
