@@ -15,7 +15,7 @@ fully before starting, honor its STOP conditions, and update your row when done.
 | 005  | Board color themes in the settings modal | P1 | S | 004 | DONE |
 | 006  | "Corroded" game theme — key-art look in gameplay | P1 | M | 005, VFX iteration | DONE |
 | 007  | Rules explainer with live simulated examples | P1 | M | VFX Lab | DONE |
-| 008  | Sound effects + background music with settings toggles | P1 | M | — | TODO |
+| 008  | Sound effects + background music with settings toggles | P1 | M | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with rationale)
 
