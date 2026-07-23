@@ -240,6 +240,7 @@ cg-board square.selected {
   --void: 128 0 160;
 }
 
+.corrosion-void-layer,
 .corrosion-units-layer,
 .corrosion-info-layer {
   position: absolute;
@@ -265,15 +266,22 @@ cg-board square.selected {
  * standalone `scale`, `cls3-seethe` owns the standalone `rotate`, and only
  * `march-wobble` (a one-shot, non-continuous effect) is allowed to touch
  * the `transform` shorthand. Do not add a new animation that sets
- * `transform` on `.corrosion-unit` without checking this note. */
+ * `transform` on `.corrosion-unit` without checking this note.
+ *
+ * The container itself stays a plain square (no border-radius) -- the acid
+ * texture sprite (`.corrosion-unit-sprite`, a child) carries the irregular
+ * splat silhouette via its own PNG alpha, so the box no longer needs to fake
+ * a blob shape. `--acid-color` (set per variant below) is also read by the
+ * chevrons/drips for their glow color, and `--march-angle` (set per-render
+ * from JS, see marchAngleDeg in overlays.ts) drives both. */
 .corrosion-unit {
   position: absolute;
   top: 0;
   left: 0;
   box-sizing: border-box;
-  border-radius: 58% 42% 55% 45% / 48% 55% 45% 52%;
   will-change: translate, scale;
-  /* See index.html's `#acid-goo` filter and Step 3's fallback note. */
+  /* See index.html's `#acid-goo` filter and Step 3's fallback note -- still
+   * roughens the sprite's photographed edges too, not just a CSS shape. */
   filter: url(#acid-goo);
 }
 
@@ -327,12 +335,32 @@ cg-board square.selected {
   box-shadow: 0 0 10px rgb(var(--acid-color) / 0.85);
 }
 
-/* Rising bubbles. */
+/* Acid-splat photo texture (generated via Replicate, see public/vfx/ and the
+ * generation script referenced in the exec report) -- the primary visual
+ * layer now, sitting between the tint/glow background above (z-index 0-ish,
+ * default stacking) and the bubbles/chevrons above it. Its own slow rotation
+ * wobble (see the reduced-motion-gated animation below) is independent of
+ * everything else: `rotate` here is a DIFFERENT element than `.corrosion-unit`
+ * itself, so it can't clobber the parent's `translate`/`scale`/`transform`
+ * usage (see the note above `.corrosion-unit`) even though it's also a
+ * `rotate`-based effect. Hidden (via inline `display:none`, see overlays.ts)
+ * for the donut/co-occupancy case, falling back to the flat gradient ring
+ * already defined on `.corrosion-unit--donut` below. */
+.corrosion-unit-sprite {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.92;
+}
+
+/* Rising bubbles -- above the sprite. */
 .corrosion-unit::after {
   content: '';
   position: absolute;
+  z-index: 1;
   inset: 6%;
-  border-radius: inherit;
   background-image: radial-gradient(circle, rgb(255 255 255 / 0.5) 0 8%, transparent 9%);
   background-size: 30% 30%;
   background-repeat: repeat;
@@ -340,16 +368,24 @@ cg-board square.selected {
   opacity: 0.7;
 }
 
-/* Drips hanging off the bottom edge. */
+/* Drips, hanging off the edge OPPOSITE the march direction (the trailing/
+ * back edge) -- authored here pointing "down" (hangs below the box) by
+ * default, then rotated by the same `--march-angle` custom property the
+ * chevrons use (see `.corrosion-unit-chevrons` below). Chevrons are authored
+ * pointing "up" by default, 180deg from drips' "down" -- rotating both by
+ * the exact same angle preserves that 180deg separation, so drips
+ * automatically end up on the back edge with no separate angle math. */
 .corrosion-unit::before {
   content: '';
   position: absolute;
+  z-index: 1;
   left: 20%;
   right: 20%;
   bottom: -18%;
   height: 30%;
   background: radial-gradient(ellipse at top, rgb(var(--acid-w) / 0.5), transparent 70%);
   border-radius: 0 0 50% 50%;
+  rotate: var(--march-angle, 0deg);
 }
 
 .corrosion-unit--b::before {
@@ -358,6 +394,61 @@ cg-board square.selected {
 
 .corrosion-unit--cls3::before {
   background: radial-gradient(ellipse at top, rgb(var(--acid-cls3) / 0.5), transparent 70%);
+}
+
+/* Leading-edge march-direction indicator: 2-3 small chevrons authored
+ * pointing "up" by default, rotated via `--march-angle` (set per-render from
+ * JS -- see marchAngleDeg in overlays.ts) to point toward the unit's actual
+ * on-screen march direction, which correctly accounts for board orientation
+ * since the angle is derived from screen-space pixel deltas, not raw `dir`.
+ * `--acid-color` is inherited from the color/class variant rules above, so
+ * class-3's chevrons read red automatically (its `--acid-color` already is
+ * the red/orange `--acid-cls3`) without a separate override. */
+.corrosion-unit-chevrons {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 6%;
+  rotate: var(--march-angle, 0deg);
+}
+
+/* Soft dark backdrop behind the chevron cluster -- same contrast trick as
+ * `.corrosion-badge`'s solid chip, needed because an acid-colored chevron on
+ * an acid-colored sprite of the same hue is otherwise nearly camouflaged
+ * (confirmed while testing). Rotates with the cluster, so it always sits
+ * right behind wherever the chevrons currently point regardless of what
+ * sprite color is underneath. */
+.corrosion-unit-chevrons::before {
+  content: '';
+  position: absolute;
+  top: 2%;
+  left: 25%;
+  right: 25%;
+  height: 42%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.25) 60%, transparent 78%);
+}
+
+/* An acid-colored triangle on its own camouflages against a same-hued
+ * sprite underneath it (verified in testing -- effectively invisible on the
+ * white/black variants' own textures). Stacking a dark AND a light
+ * drop-shadow gives it a visible edge against sprites of either lightness,
+ * while the fill itself stays `--acid-color` (still reads as acid-tinted,
+ * and gives class-3 red "for free" since its `--acid-color` already is the
+ * red/orange `--acid-cls3`). */
+.corrosion-unit-chevrons .chevron {
+  width: 0;
+  height: 0;
+  border-left: 0.26em solid transparent;
+  border-right: 0.26em solid transparent;
+  border-bottom: 0.34em solid rgb(var(--acid-color) / 1);
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.5));
+  font-size: 1.9em;
+  margin-top: -0.05em;
 }
 
 .corrosion-unit.is-feeding {
@@ -421,18 +512,43 @@ cg-board square.selected {
 /* --- Purple void. --- */
 
 /* The void must read as unmistakably purple in every frame -- so the base
- * fill here is a STATIC color (no animated `filter`/hue-rotate on this
- * element). The rotating "smoke" look lives entirely on `::after` below,
- * oversized and rotated via `transform: rotate()` (its own independent
- * property, not touched by anything else here) so it sweeps across the
- * static purple base without ever changing its hue. `overflow: hidden`
- * clips the oversized, rotating `::after` back down to this element's box. */
+ * fill here is STATIC (no animated `filter`/hue-rotate on this element): the
+ * generated void-1.png texture (swirling smoke pool, faint runes) layered
+ * over the flat purple color as a fallback/tint. The rotating "smoke" look
+ * lives entirely on `::after` below, oversized and rotated via
+ * `transform: rotate()` (its own independent property, not touched by
+ * anything else here) so it sweeps across the static purple base without
+ * ever changing its hue. `overflow: hidden` clips the oversized, rotating
+ * `::after` back down to this element's box. */
+/* Geometry (left/top/width/height) is set inline from JS -- see renderVoid
+ * in overlays.ts -- since this now lives directly in `.corrosion-void-layer`
+ * rather than nested inside a `.corrosion-marker` (which used to supply
+ * position/size via its own inline styles, with this filling it via
+ * `inset: 0`). */
 .corrosion-purple-bg {
   position: absolute;
-  inset: 0;
+  box-sizing: border-box;
   overflow: hidden;
   background: rgb(var(--void) / 0.85);
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+}
+
+/* The void-1.png texture lives on its own layer with reduced opacity, NOT
+ * baked fully-opaque into the base background above: a class-3 unit spends
+ * most of its life standing on its own purple trail (it repaints purple
+ * under itself every surviving phase), and the corrosion unit div beneath
+ * this layer is inset (not full-square) specifically so a a co-located
+ * purple square doesn't fully hide it -- see the "Purple is split into a
+ * base tint... and a skull glyph" comment in overlays.ts. A fully-opaque
+ * void texture here would defeat that inset (confirmed while testing: the
+ * unit and its chevrons vanished completely under it), so this sits at 0.5
+ * opacity, textured but not opaque enough to fully occlude what's beneath. */
+.corrosion-purple-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/vfx/void-1.png') center / cover;
+  opacity: 0.5;
 }
 
 .corrosion-purple-bg::after {
@@ -461,15 +577,41 @@ cg-board square.selected {
  * continuous idle/march animations are fully disabled. --- */
 @media (prefers-reduced-motion: no-preference) {
   .corrosion-unit {
-    animation: acid-pulse 2.8s ease-in-out infinite alternate, acid-blob 8s ease-in-out infinite;
+    animation: acid-pulse 2.8s ease-in-out infinite alternate;
   }
 
   .corrosion-unit--cls3 {
     animation: acid-pulse 1.2s ease-in-out infinite alternate, cls3-seethe 6s linear infinite;
   }
 
+  /* Slow rotation wobble of the sprite layer -- independent of everything
+   * else on `.corrosion-unit` (different element, see the note above
+   * `.corrosion-unit-sprite`). cls-3 gets a faster wobble to match its
+   * generally faster/angrier pulse/seethe cadence elsewhere. */
+  .corrosion-unit-sprite {
+    animation: sprite-wobble 7s ease-in-out infinite alternate;
+  }
+
+  .corrosion-unit--cls3 .corrosion-unit-sprite {
+    animation-duration: 3.5s;
+  }
+
   .corrosion-unit::after {
     animation: acid-bubbles 3s linear infinite;
+  }
+
+  /* Fade+drift "flowing toward direction" loop, staggered per chevron for a
+   * flock-like flow rather than all three pulsing in lockstep. */
+  .corrosion-unit-chevrons .chevron:nth-child(1) {
+    animation: chevron-flow 1s ease-in-out infinite;
+  }
+  .corrosion-unit-chevrons .chevron:nth-child(2) {
+    animation: chevron-flow 1s ease-in-out infinite;
+    animation-delay: 0.33s;
+  }
+  .corrosion-unit-chevrons .chevron:nth-child(3) {
+    animation: chevron-flow 1s ease-in-out infinite;
+    animation-delay: 0.66s;
   }
 
   .corrosion-unit.is-feeding {
@@ -486,7 +628,7 @@ cg-board square.selected {
     /* Transitions the standalone `translate` property JS updates on march,
      * not `transform` -- see the note above `.corrosion-unit`. */
     transition: translate 480ms cubic-bezier(0.5, 0, 0.2, 1);
-    animation: acid-pulse 2.8s ease-in-out infinite alternate, acid-blob 8s ease-in-out infinite, march-wobble 480ms ease-in-out;
+    animation: acid-pulse 2.8s ease-in-out infinite alternate, march-wobble 480ms ease-in-out;
   }
 
   .corrosion-unit--cls3.is-marching {
@@ -562,12 +704,26 @@ cg-board square.selected {
   }
 }
 
-@keyframes acid-blob {
-  0%, 100% {
-    border-radius: 58% 42% 55% 45% / 48% 55% 45% 52%;
+@keyframes sprite-wobble {
+  from {
+    rotate: -6deg;
   }
-  50% {
-    border-radius: 45% 55% 48% 52% / 55% 45% 55% 45%;
+  to {
+    rotate: 6deg;
+  }
+}
+
+@keyframes chevron-flow {
+  0% {
+    opacity: 0;
+    translate: 0 40%;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -60%;
   }
 }
 

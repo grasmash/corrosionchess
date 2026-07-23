@@ -12,6 +12,7 @@ import { forwardDir } from '../engine/board';
 // phase completes, but we still render it as two visually distinct halves
 // rather than silently merging or dropping cells.
 const LAYER_CLASS = 'corrosion-overlay-layer';
+const VOID_LAYER_CLASS = 'corrosion-void-layer';
 const UNITS_LAYER_CLASS = 'corrosion-units-layer';
 const INFO_LAYER_CLASS = 'corrosion-info-layer';
 
@@ -32,7 +33,49 @@ interface Bucket {
 
 interface UnitDivEntry {
   el: HTMLDivElement;
+  sprite: HTMLDivElement;
+  chevrons: HTMLDivElement;
   sq: number;
+}
+
+// Two photographed acid-splat sprites per color (picked by unit id % 2, for
+// per-unit variety) plus one for class-3 (always the same -- design calls
+// for it to read as visually distinct/uniform "critical" acid regardless of
+// owner, same reasoning as unitVariantClass below). Paths are under
+// public/vfx/, served at this root path by Vite in both dev and build.
+const SPRITE_PATHS: Record<'w' | 'b' | 'cls3', string[]> = {
+  w: ['/vfx/acid-w-1.png', '/vfx/acid-w-2.png'],
+  b: ['/vfx/acid-b-1.png', '/vfx/acid-b-2.png'],
+  cls3: ['/vfx/acid-cls3-1.png'],
+};
+
+function spriteFor(color: Color, cls: 1 | 2 | 3, unitId: number): string {
+  const options = SPRITE_PATHS[cls === 3 ? 'cls3' : color];
+  return options[unitId % options.length];
+}
+
+/**
+ * On-screen march direction, expressed as the clockwise `rotate` angle (in
+ * degrees) that turns an element authored to point "up" (12 o'clock, i.e.
+ * toward -Y) so it instead points toward the unit's actual march direction.
+ * Computed from `squarePx(cell)` vs `squarePx(cell + dir*size)` -- the pixel
+ * delta between the unit's current square and the one it marches into next
+ * -- rather than from `dir` alone, so it automatically accounts for board
+ * orientation (a guest viewing the board flipped sees the same unit marching
+ * the opposite screen direction, and this recomputes correctly for that
+ * without knowing about orientation itself).
+ *
+ * Corrosion only ever marches along a file (never diagonally -- `dir` shifts
+ * rank only), so in practice this always comes out to ~0deg or ~180deg; the
+ * general vector form still handles it correctly and doesn't hardcode that
+ * assumption.
+ */
+function marchAngleDeg(sq: number, dir: 1 | -1, size: number, squarePx: SquarePx): number {
+  const from = squarePx(sq);
+  const to = squarePx(sq + dir * size);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  return Math.atan2(dx, -dy) * (180 / Math.PI);
 }
 
 function bucketKeyFor(e: CellEntry): string {
@@ -272,10 +315,10 @@ function renderUnits(
   const firstRender = prev == null;
   const purpleSquares = new Set(gs.purple);
 
-  const current = new Map<string, { sq: number; color: Color; cls: 1 | 2 | 3 }>();
+  const current = new Map<string, { sq: number; color: Color; cls: 1 | 2 | 3; dir: 1 | -1; unitId: number }>();
   for (const u of gs.corrosions) {
     u.cells.forEach((sq, i) => {
-      current.set(`${u.id}:${i}`, { sq, color: u.color, cls: u.cls });
+      current.set(`${u.id}:${i}`, { sq, color: u.color, cls: u.cls, dir: u.dir, unitId: u.id });
     });
   }
 
@@ -295,7 +338,7 @@ function renderUnits(
   const marchedToSquare = new Set<number>();
 
   // Spawn/march/update.
-  for (const [key, { sq, color, cls }] of current) {
+  for (const [key, { sq, color, cls, dir, unitId }] of current) {
     const pos = squarePx(sq);
     const inset = purpleSquares.has(sq) ? pos.w * 0.12 : 0;
     const x = pos.x - board.left + inset;
@@ -306,8 +349,17 @@ function renderUnits(
     const isSpawn = !entry;
     if (!entry) {
       const el = document.createElement('div');
+      const sprite = document.createElement('div');
+      sprite.className = 'corrosion-unit-sprite';
+      const chevrons = document.createElement('div');
+      chevrons.className = 'corrosion-unit-chevrons';
+      // 2-3 leading-edge chevrons (see marchAngleDeg / the CSS `--march-angle`
+      // custom property for the direction math); populated once here, styled
+      // and animated entirely from CSS/the custom property below.
+      chevrons.innerHTML = '<span class="chevron"></span><span class="chevron"></span><span class="chevron"></span>';
+      el.append(sprite, chevrons);
       unitsLayer.appendChild(el);
-      entry = { el, sq };
+      entry = { el, sprite, chevrons, sq };
       map.set(key, entry);
     }
 
@@ -315,10 +367,21 @@ function renderUnits(
     // this square (a friendly pass-through co-occupancy, e.g. corrosion
     // spawning onto the capturing piece's own square) -- the raised
     // opacities below would otherwise fully hide the piece under the blob.
-    const donut = gs.board[sq] != null ? ' corrosion-unit--donut' : '';
-    entry.el.className = unitVariantClass(color, cls) + donut;
+    // The sprite texture is hidden and the flat `--donut` gradient ring
+    // (already correct and verified) takes over as the sole visible layer --
+    // simpler and lower-risk than mask-image-ing a hole into a photographed
+    // sprite, and explicitly sanctioned as the fallback for this case.
+    const hasPiece = gs.board[sq] != null;
+    entry.el.className = unitVariantClass(color, cls) + (hasPiece ? ' corrosion-unit--donut' : '');
     entry.el.style.width = `${size}px`;
     entry.el.style.height = `${size}px`;
+    entry.sprite.style.backgroundImage = `url(${spriteFor(color, cls, unitId)})`;
+    entry.sprite.style.display = hasPiece ? 'none' : '';
+    // Drives both the chevrons' pointing direction and (via the same
+    // variable, see style.css) the drips' bias toward the trailing/back
+    // edge -- recomputed every render since a class-3 unit's `dir` flips
+    // when it bounces off a board edge.
+    entry.el.style.setProperty('--march-angle', `${marchAngleDeg(sq, dir, gs.size, squarePx)}deg`);
 
     const moved = !isSpawn && entry.sq !== sq;
     if (moved) marchedToSquare.add(sq);
@@ -366,7 +429,39 @@ function renderUnits(
   }
 }
 
-function renderInfo(infoLayer: HTMLDivElement, gs: GameState, prev: GameState | null | undefined, squarePx: SquarePx, board: DOMRect): void {
+/**
+ * Purple base tint, in its OWN sublayer beneath `.corrosion-units-layer`
+ * (see renderOverlays) rather than inside the badges/skull info layer. Used
+ * to sit inside the same marker as the skull/badges, both stacked above the
+ * whole units layer -- which meant a live corrosion cell standing on its own
+ * purple square (the common case for class-3, which repaints purple under
+ * itself every surviving phase) was almost entirely hidden underneath the
+ * purple tint, sprite/chevrons included, no matter how the unit itself was
+ * inset. Splitting the void into its own bottom-most sublayer restores the
+ * originally-intended stacking (purple base -> corrosion -> badges/skull,
+ * all legible at once) without touching the skull/badge code below at all.
+ */
+function renderVoid(voidLayer: HTMLDivElement, gs: GameState, prev: GameState | null | undefined, squarePx: SquarePx, board: DOMRect): void {
+  voidLayer.replaceChildren();
+
+  const purpleSquares = new Set(gs.purple);
+  const prevPurpleSquares = new Set(prev?.purple ?? []);
+  const firstRender = prev == null;
+
+  for (const square of purpleSquares) {
+    const pos = squarePx(square);
+    const purpleBg = document.createElement('div');
+    purpleBg.className = 'corrosion-purple-bg';
+    purpleBg.style.left = `${pos.x - board.left}px`;
+    purpleBg.style.top = `${pos.y - board.top}px`;
+    purpleBg.style.width = `${pos.w}px`;
+    purpleBg.style.height = `${pos.w}px`;
+    if (!firstRender && !prevPurpleSquares.has(square)) purpleBg.classList.add('is-purpling');
+    voidLayer.appendChild(purpleBg);
+  }
+}
+
+function renderInfo(infoLayer: HTMLDivElement, gs: GameState, squarePx: SquarePx, board: DOMRect): void {
   infoLayer.replaceChildren();
 
   // Group every corrosion unit's cells by square (badges only care about
@@ -381,8 +476,6 @@ function renderInfo(infoLayer: HTMLDivElement, gs: GameState, prev: GameState | 
   }
 
   const purpleSquares = new Set(gs.purple);
-  const prevPurpleSquares = new Set(prev?.purple ?? []);
-  const firstRender = prev == null;
   const squares = new Set<number>([...bySquare.keys(), ...purpleSquares]);
 
   for (const square of squares) {
@@ -395,18 +488,6 @@ function renderInfo(infoLayer: HTMLDivElement, gs: GameState, prev: GameState | 
     marker.style.height = `${pos.w}px`;
 
     const isPurple = purpleSquares.has(square);
-
-    // Purple is split into a base tint (painted first, under everything) and
-    // a skull glyph (painted last, always on top) so a co-located corrosion
-    // cell (a live cls-3 cell standing on its own already-purple square,
-    // normal after it bounces off the board edge and retreads its trail)
-    // can never fully wash either one out.
-    if (isPurple) {
-      const purpleBg = document.createElement('div');
-      purpleBg.className = 'corrosion-purple-bg';
-      if (!firstRender && !prevPurpleSquares.has(square)) purpleBg.classList.add('is-purpling');
-      marker.appendChild(purpleBg);
-    }
 
     const entries = bySquare.get(square);
     if (entries) {
@@ -430,6 +511,10 @@ function renderInfo(infoLayer: HTMLDivElement, gs: GameState, prev: GameState | 
       });
     }
 
+    // Skull is still in this (topmost) layer -- "painted last, always on
+    // top" -- so it never gets washed out by the corrosion unit now sitting
+    // visually above the purple tint in the layer between this one and the
+    // void layer below.
     if (isPurple) {
       const skull = document.createElement('div');
       skull.className = 'corrosion-purple-skull';
@@ -467,9 +552,16 @@ export function renderOverlays(container: HTMLElement, view: BoardView, gs: Game
   layer.style.width = `${board.width}px`;
   layer.style.height = `${board.height}px`;
 
+  // DOM order matters here -- see the comment above renderVoid -- and
+  // ensureSublayer only creates a layer once and appends in call order, so
+  // this order (void, then units, then info) is also the paint order:
+  // purple base tint at the bottom, corrosion units above it, badges/skull
+  // on top of everything.
+  const voidLayer = ensureSublayer(layer, VOID_LAYER_CLASS);
   const unitsLayer = ensureSublayer(layer, UNITS_LAYER_CLASS);
   const infoLayer = ensureSublayer(layer, INFO_LAYER_CLASS);
 
+  renderVoid(voidLayer, gs, prev, squarePx, board);
   renderUnits(unitsLayer, gs, prev, squarePx, board);
-  renderInfo(infoLayer, gs, prev, squarePx, board);
+  renderInfo(infoLayer, gs, squarePx, board);
 }
