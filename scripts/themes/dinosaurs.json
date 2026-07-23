@@ -1,6 +1,6 @@
 {
   "name": "dinosaurs",
-  "stylePhrase": "playful natural-history museum-diorama 3D game asset render, high detail, dramatic rim lighting, consistent top-left lighting",
+  "stylePhrase": "playful natural-history museum-diorama 3D game asset render, high detail, dramatic rim lighting, consistent top-left lighting, ornate intricate surface detail, richly decorated, unmistakable dinosaur motifs and textures covering the entire body of the piece, not just the color palette",
   "sides": {
     "w": {
       "label": "fossil-bone dinosaur",
@@ -12,11 +12,11 @@
     }
   },
   "pieces": {
-    "k": "a {SIDE} tyrannosaurus rex head crest as a crown",
-    "q": "an elegant {SIDE} long-necked brachiosaurus curve, more slender than the king",
-    "r": "a stony volcano mesa rock tower colored like a {SIDE}",
-    "b": "a {SIDE} raptor-claw mitre shape",
-    "n": "a {SIDE} triceratops head profile with a brow horn",
-    "p": "a small {SIDE} dinosaur egg dome resting on a nest base"
+    "k": "a {SIDE}, the small cross finial at the very top is sculpted as a miniature tyrannosaurus rex skull with visible jagged teeth, the body below covered in bumpy reptilian dinosaur-hide texture with raised osteoderm scutes",
+    "q": "a {SIDE}, the piece's neck curves upward in a long graceful sway like a brachiosaurus's neck before reaching the tiara, the body textured with smooth sauropod hide and small bony back plates",
+    "r": "a {SIDE} tower built from rough volcanic mesa rock, studded with small fossilized dinosaur bones and claws embedded in the stone, glowing reptile eyes in the shadows of the crenellations",
+    "b": "a {SIDE}, the smooth mitre head is shaped and textured like a curved raptor claw with a sharp ridged edge, the body wrapped in overlapping reptilian scales",
+    "n": "a {SIDE} triceratops head profile with a brow horn, frilled neck bone plate, and rough scaled hide texture",
+    "p": "a small {SIDE} dinosaur egg dome, the shell beautifully textured with a mottled speckled fossil pattern, resting on an ornate woven twig-and-fern nest base"
   }
 }
