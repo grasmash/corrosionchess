@@ -78,6 +78,17 @@ function backToSetup(): void {
  */
 let lastConfig: Config = currentLastConfig();
 let lastPersonaId: string | undefined;
+let lastPlayAs: PlayAs = currentLastPlayAs();
+
+/** Resolves the config screen's "Play as" choice to an actual `Color` --
+ * "random" has no meaning to the color-agnostic engine, so it's rolled
+ * here, at the point a game actually starts (host-side for online: the
+ * plan's "Random resolved host-side before init"). */
+function resolveColor(choice: PlayAs, rng: () => number = Math.random): Color {
+  if (choice === 'white') return 'w';
+  if (choice === 'black') return 'b';
+  return rng() < 0.5 ? 'w' : 'b';
+}
 
 /**
  * Opens the config screen for a mode already chosen on splash (or being
@@ -91,13 +102,18 @@ function openConfig(mode: 'hotseat' | 'host' | 'bot'): void {
     result => {
       lastConfig = result.config;
       setLastConfig(result.config);
+      if (result.playAs) {
+        lastPlayAs = result.playAs;
+        setLastPlayAs(result.playAs);
+      }
       if (result.mode === 'host') {
-        startHostGame(result.config);
+        startHostGame(result.config, resolveColor(result.playAs ?? lastPlayAs));
       } else if (result.mode === 'bot') {
+        const humanColor = resolveColor(result.playAs ?? lastPlayAs);
         showBotSelect(
           persona => {
             lastPersonaId = persona.id;
-            startBotGame(result.config, persona);
+            startBotGame(result.config, persona, humanColor);
           },
           selectedId => {
             // A card can be highlighted without ever clicking Play; still
@@ -116,6 +132,7 @@ function openConfig(mode: 'hotseat' | 'host' | 'bot'): void {
     () => start(), // Back -> splash is the only mode chooser now.
     mode,
     lastConfig,
+    lastPlayAs,
   );
 }
 
@@ -191,7 +208,7 @@ function showJoinError(message: string): void {
  * moment a guest connects (host is always White). Re-fires for subsequent
  * connections too (a guest rejoining via the same URL after a drop), in
  * which case the already-mounted game just re-wires to the fresh session. */
-function startHostGame(config: Config): void {
+function startHostGame(config: Config, hostColor: Color): void {
   appEl.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'host-wait-screen';
@@ -262,7 +279,7 @@ function startHostGame(config: Config): void {
     session => {
       if (!rewireSession) {
         rewireSession = mountOnlineGame({
-          youAre: 'w',
+          youAre: hostColor,
           isHost: true,
           config,
           initialState: newGame(config),
@@ -636,7 +653,10 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
       s.onStatus(status => {
         if (session !== s) return;
         if (status === 'open') {
-          s.send({ type: 'init', config, state, yourColor: 'b' });
+          // Guest always gets the opposite of whatever the host chose
+          // (incl. the host's own "random" roll, already resolved by
+          // openConfig before startHostGame was ever called).
+          s.send({ type: 'init', config, state, yourColor: youAre === 'w' ? 'b' : 'w' });
         }
       });
     }
@@ -776,12 +796,13 @@ function moveIsCapture(s: GameState, m: Move): boolean {
   return (!!dest && dest.color !== mover.color) || isEnPassant;
 }
 
-/** Bot flow: human is always White, the persona is always Black (v1). Reuses
- * the same board/HUD render wiring as startGame's hotseat flow, plus a chat
- * panel fed by a diff between the state before/after each applied move. */
-function startBotGame(config: Config, persona: Persona): void {
-  const humanColor: Color = 'w';
-  const botColor: Color = 'b';
+/** Bot flow: human plays `humanColor` (chosen on the config screen -- White,
+ * Black, or a pre-resolved Random roll), the persona takes the other side.
+ * Reuses the same board/HUD render wiring as startGame's hotseat flow, plus
+ * a chat panel fed by a diff between the state before/after each applied
+ * move. */
+function startBotGame(config: Config, persona: Persona, humanColor: Color): void {
+  const botColor: Color = humanColor === 'w' ? 'b' : 'w';
   let state: GameState = newGame(config);
 
   const { boardEl, hudEl, topBar, bottomBar } = buildGameLayout(config);
@@ -790,6 +811,7 @@ function startBotGame(config: Config, persona: Persona): void {
 
   const view = createBoardView(state.size);
   view.mount(boardEl);
+  view.setOrientation(humanColor);
 
   // See the matching comment in startGame/mountOnlineGame -- startBotGame is
   // itself re-invoked fresh via showSetup/showBotSelect, so this always
@@ -949,6 +971,10 @@ function startBotGame(config: Config, persona: Persona): void {
 
   pushQuip('start', true);
   render();
+  // Human as Black means the bot (White) moves first -- a fresh game always
+  // starts with White to move, so this only ever fires when humanColor is
+  // 'black'/botColor is 'w', never redundantly for the White-human case.
+  if (state.turn === botColor) scheduleBotMove();
 
   // Expose the raw chessgroundx Api for manual verification only, matching
   // the pattern in startGame/mountOnlineGame.

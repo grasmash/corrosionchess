@@ -1,5 +1,11 @@
 import type { Config } from '../engine/types';
 
+/** UI-only color preference -- deliberately NOT part of the engine's
+ * `Config` (tiers/board size only, engine-consumed as-is); this is resolved
+ * to an actual `Color` by the caller (main.ts) at game-start time, since
+ * "random" has no meaning to the color-agnostic engine. */
+export type PlayAs = 'white' | 'black' | 'random';
+
 export interface SetupResult {
   config: Config;
   mode: 'hotseat' | 'host' | 'join' | 'bot';
@@ -8,6 +14,10 @@ export interface SetupResult {
    * the initial `onStart({mode:'bot'})` fired by this screen's "Play vs Bot"
    * button (main.ts shows the roster before this is known). */
   personaId?: string;
+  /** Only meaningful for 'bot' and 'host' (the config screen hides the
+   * picker entirely for 'hotseat', where color choice is irrelevant --
+   * both players share one board). Absent for 'hotseat'. */
+  playAs?: PlayAs;
 }
 
 /**
@@ -79,6 +89,30 @@ export function setLastConfig(c: Config): void {
   }
 }
 
+const LAST_PLAYAS_KEY = 'lastplayas';
+const DEFAULT_PLAYAS: PlayAs = 'white';
+const PLAYAS_VALUES: PlayAs[] = ['white', 'black', 'random'];
+
+/** Same persistence pattern as `currentLastConfig`/`setLastConfig`, its own
+ * storage key since color choice isn't part of the engine's `Config`. */
+export function currentLastPlayAs(): PlayAs {
+  let stored: string | null;
+  try {
+    stored = localStorage.getItem(LAST_PLAYAS_KEY);
+  } catch {
+    return DEFAULT_PLAYAS;
+  }
+  return PLAYAS_VALUES.includes(stored as PlayAs) ? (stored as PlayAs) : DEFAULT_PLAYAS;
+}
+
+export function setLastPlayAs(p: PlayAs): void {
+  try {
+    localStorage.setItem(LAST_PLAYAS_KEY, p);
+  } catch {
+    /* storage unavailable -- in-memory nav state still covers this session */
+  }
+}
+
 /** Per-mode copy: the splash screen is the ONLY place a player picks a mode
  * (Play Bots / Pass & Play / Play Online) -- this config card just
  * configures the corrosion tiers/board size for whichever mode was already
@@ -105,12 +139,16 @@ const MODE_PRIMARY_LABEL: Record<'hotseat' | 'host' | 'bot', string> = {
  * toggles (typically the caller's last-confirmed config, via
  * `currentLastConfig`) so returning here -- from splash OR from the bot
  * roster's Back button -- doesn't reset the player's selections.
+ * `initialPlayAs` prefills the "Play as" color picker, shown only for
+ * 'bot'/'host' (hotseat shares one board, so color choice is meaningless
+ * there and the row is omitted entirely).
  */
 export function showSetup(
   onStart: (r: SetupResult) => void,
   onBack: () => void,
   mode: 'hotseat' | 'host' | 'bot',
   initialConfig: Config,
+  initialPlayAs: PlayAs,
 ): void {
   const el = document.querySelector<HTMLDivElement>('#app');
   if (!el) throw new Error('showSetup: #app element not found');
@@ -186,6 +224,49 @@ export function showSetup(
   form.append(tier1.row, tier2.row, tier3.row, bigBoard.row);
   wrap.appendChild(form);
 
+  // "Play as" color picker: bot/host only -- hotseat shares one board
+  // between two humans, so a color choice has no meaning there.
+  let selectedPlayAs: PlayAs = initialPlayAs;
+  if (mode === 'bot' || mode === 'host') {
+    const colorRow = document.createElement('div');
+    colorRow.className = 'setup-color-row';
+
+    const colorLabel = document.createElement('span');
+    colorLabel.className = 'setup-toggle-label';
+    colorLabel.textContent = 'Play as';
+    colorRow.appendChild(colorLabel);
+
+    const colorOptions = document.createElement('div');
+    colorOptions.className = 'setup-color-options';
+
+    const optionLabels: { value: PlayAs; label: string }[] = [
+      { value: 'white', label: 'White' },
+      { value: 'black', label: 'Black' },
+      { value: 'random', label: 'Random' },
+    ];
+    const optionBtns = optionLabels.map(({ value, label }) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'setup-color-btn';
+      btn.textContent = label;
+      btn.setAttribute('aria-pressed', String(value === selectedPlayAs));
+      if (value === selectedPlayAs) btn.classList.add('setup-color-btn--active');
+      btn.onclick = () => {
+        selectedPlayAs = value;
+        for (const other of colorOptions.querySelectorAll('.setup-color-btn')) {
+          other.classList.remove('setup-color-btn--active');
+          other.setAttribute('aria-pressed', 'false');
+        }
+        btn.classList.add('setup-color-btn--active');
+        btn.setAttribute('aria-pressed', 'true');
+      };
+      return btn;
+    });
+    colorOptions.append(...optionBtns);
+    colorRow.appendChild(colorOptions);
+    wrap.appendChild(colorRow);
+  }
+
   const buttons = document.createElement('div');
   buttons.className = 'setup-buttons';
 
@@ -206,7 +287,12 @@ export function showSetup(
   const primaryBtn = document.createElement('button');
   primaryBtn.className = 'btn btn-primary';
   primaryBtn.textContent = MODE_PRIMARY_LABEL[mode];
-  primaryBtn.onclick = () => onStart({ config: currentConfig(), mode });
+  primaryBtn.onclick = () =>
+    onStart({
+      config: currentConfig(),
+      mode,
+      playAs: mode === 'bot' || mode === 'host' ? selectedPlayAs : undefined,
+    });
 
   buttons.append(backBtn, primaryBtn);
   wrap.appendChild(buttons);

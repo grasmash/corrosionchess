@@ -1320,6 +1320,44 @@ input[type='text'] {
   outline-offset: 2px;
 }
 
+/* "Play as" color picker (bot/host modes only) -- a 3-way segmented
+ * control, chess.com-style: unselected segments read as plain secondary
+ * buttons, the active one gets the accent fill. */
+.setup-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setup-color-options {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.setup-color-btn {
+  background: var(--elevated);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.setup-color-btn:hover {
+  border-color: var(--accent);
+}
+
+.setup-color-btn--active {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
 .setup-buttons {
   display: flex;
   flex-direction: column;
