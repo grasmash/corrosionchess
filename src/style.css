@@ -376,13 +376,28 @@ cg-board square.selected {
 
 /* --- Purple void. --- */
 
+/* The void must read as unmistakably purple in every frame -- so the base
+ * fill here is a STATIC color (no animated `filter`/hue-rotate on this
+ * element). The rotating "smoke" look lives entirely on `::after` below,
+ * oversized and rotated via `transform: rotate()` (its own independent
+ * property, not touched by anything else here) so it sweeps across the
+ * static purple base without ever changing its hue. `overflow: hidden`
+ * clips the oversized, rotating `::after` back down to this element's box. */
 .corrosion-purple-bg {
   position: absolute;
   inset: 0;
-  background:
-    conic-gradient(rgb(255 255 255 / 0.08), transparent 30%, rgb(255 255 255 / 0.08) 60%, transparent 90%),
-    rgb(var(--void) / 0.85);
+  overflow: hidden;
+  background: rgb(var(--void) / 0.85);
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+}
+
+.corrosion-purple-bg::after {
+  content: '';
+  position: absolute;
+  /* 2x oversized (inset -50% on all sides) and centered so a full rotation
+   * never uncovers a corner of the parent's box. */
+  inset: -50%;
+  background: conic-gradient(rgb(255 255 255 / 0.08), transparent 30%, rgb(255 255 255 / 0.08) 60%, transparent 90%);
 }
 
 .corrosion-purple-skull {
@@ -452,12 +467,12 @@ cg-board square.selected {
     animation: kill-burst 700ms ease-out forwards;
   }
 
-  .corrosion-purple-bg {
-    animation: void-smoke 12s linear infinite;
+  .corrosion-purple-bg::after {
+    animation: void-smoke-rotate 12s linear infinite;
   }
 
   .corrosion-purple-bg.is-purpling {
-    animation: void-smoke 12s linear infinite, purple-etch-in 500ms ease-out;
+    animation: purple-etch-in 500ms ease-out;
   }
 
   .corrosion-purple-skull {
@@ -610,21 +625,22 @@ cg-board square.selected {
   }
 }
 
-@keyframes void-smoke {
+/* Rotates the `::after` smoke overlay only -- NOT the purple base fill, and
+ * NOT via `filter: hue-rotate()` (a prior version animated hue-rotate on
+ * the base element itself, which cycled the void through brown/olive/green
+ * and was only purple for a fraction of the loop). `.corrosion-purple-bg`
+ * itself never animates, so it stays a flat, unmistakable purple in every
+ * frame; only its oversized `::after` gradient sweeps around via
+ * `transform: rotate()`. */
+@keyframes void-smoke-rotate {
   from {
-    filter: hue-rotate(0deg);
+    transform: rotate(0deg);
   }
   to {
-    filter: hue-rotate(360deg);
+    transform: rotate(360deg);
   }
 }
 
-/* Deliberately doesn't touch `filter`: `.corrosion-purple-bg` runs
- * `void-smoke` (also `filter`) continuously, and -- same rule as the
- * corrosion-unit note above -- two animations on the same element can't
- * both drive one property; whichever is listed later in the `animation`
- * shorthand wins for that property, not both. background-color/opacity
- * aren't touched by void-smoke, so animating those here is conflict-free. */
 @keyframes purple-etch-in {
   0% {
     background-color: transparent;
@@ -1113,4 +1129,194 @@ input[type='text'] {
 
 .log-event {
   color: var(--text-dim);
+}
+
+/* --- BOTS (plan 003): bot-select roster screen + in-game chat panel --- */
+
+.bot-select-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+.bot-select-section {
+  width: 100%;
+}
+
+.bot-select-section-title {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bot-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.bot-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bot-card:hover {
+  border-color: var(--accent);
+}
+
+.bot-card--selected {
+  border-color: var(--accent);
+  background: var(--elevated);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.bot-card-avatar-wrap {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+}
+
+.bot-card-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--elevated);
+}
+
+.avatar-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+.avatar-fallback--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.95rem;
+}
+
+.bot-card-info {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.bot-card-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.bot-card-name {
+  font-weight: 700;
+}
+
+.bot-card-rating {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+}
+
+.bot-card-tagline {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bot-select-buttons {
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* In-game chat panel (sidebar, above the move log) */
+
+.bot-chat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.bot-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bot-chat-avatar-wrap {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+}
+
+.bot-chat-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--elevated);
+}
+
+.bot-chat-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.bot-chat-rating {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+}
+
+.bot-chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.chat-bubble {
+  align-self: flex-start;
+  max-width: 90%;
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 12px;
+  border-bottom-left-radius: 3px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.chat-bubble--typing {
+  color: var(--text-dim);
+  font-weight: 700;
+  letter-spacing: 0.1em;
 }

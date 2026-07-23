@@ -1,5 +1,6 @@
 import type { BoardView } from './boardview';
 import type { Color, GameState, Piece } from '../engine/types';
+import { forwardDir } from '../engine/board';
 
 // Class-1/2 corrosion is tinted by owner color; class 3 is always red
 // regardless of owner (per the design spec, "critical" corrosion looks the
@@ -111,6 +112,35 @@ function allCorrosionSquares(gs: GameState): Set<number> {
   const s = new Set<number>();
   for (const u of gs.corrosions) for (const c of u.cells) s.add(c);
   return s;
+}
+
+/**
+ * True when a pawn vanishing from `sq` is explained by en passant rather
+ * than corrosion. Unlike a normal capture, en passant does NOT leave the
+ * capturing piece standing on the captured pawn's square -- the capturing
+ * pawn lands one rank further on (the square it just passed over), so the
+ * general "a piece is standing there now, so it can't have been corrosion"
+ * reasoning in the caller doesn't cover this case on its own. This can
+ * collide with a real corrosion-destroy check because a corrosion cell
+ * legitimately co-occupying that square (a stable, reachable board state)
+ * is exactly the condition the caller is scanning for.
+ *
+ * Signature of an en passant vacate: the vanished piece is a pawn of color
+ * `C`, and the square the *opposing* pawn would have landed on (one rank
+ * toward `C`'s own back rank is wrong -- it's one rank in the CAPTURING
+ * side's forward direction, since that's the square it passed over) now
+ * holds an enemy pawn that wasn't there before the move. That destination
+ * square is always empty pre-move (chess rule -- en passant's target square
+ * has no piece to "capture" there), so `prev.board[epSq] == null` plus a
+ * freshly-arrived opposing pawn at `epSq` is a safe, sufficient signature.
+ */
+function isEnPassantVacate(prev: GameState, gs: GameState, sq: number, vacated: Piece): boolean {
+  if (vacated.type !== 'p') return false;
+  const capturingColor: Color = vacated.color === 'w' ? 'b' : 'w';
+  const epSq = sq + gs.size * forwardDir(capturingColor);
+  if (epSq < 0 || epSq >= gs.size * gs.size) return false;
+  const landed = gs.board[epSq];
+  return !!landed && landed.color === capturingColor && landed.type === 'p' && prev.board[epSq] == null;
 }
 
 function pieceGhostClass(p: Piece): string {
@@ -239,7 +269,10 @@ function renderUnits(
   // Piece destroyed by corrosion: was a piece before the last applied move,
   // is empty now, and the square was touched by a corrosion cell either
   // before or after the move. A normal capture never satisfies this because
-  // the capturing piece is standing on the square in `gs.board`.
+  // the capturing piece is standing on the square in `gs.board` -- except en
+  // passant, which vacates the captured pawn's square without the capturing
+  // pawn ever landing there, so that case needs an explicit exclusion (see
+  // isEnPassantVacate).
   if (!firstRender && prev) {
     const prevCorrSquares = allCorrosionSquares(prev);
     const currCorrSquares = allCorrosionSquares(gs);
@@ -247,7 +280,7 @@ function renderUnits(
     for (let sq = 0; sq < size * size; sq++) {
       const before = prev.board[sq];
       const after = gs.board[sq];
-      if (before && !after && (prevCorrSquares.has(sq) || currCorrSquares.has(sq))) {
+      if (before && !after && (prevCorrSquares.has(sq) || currCorrSquares.has(sq)) && !isEnPassantVacate(prev, gs, sq, before)) {
         spawnPieceGhost(unitsLayer, before, sq, squarePx, board);
         spawnKillBurst(unitsLayer, sq, squarePx, board);
         for (const entry of map.values()) {
