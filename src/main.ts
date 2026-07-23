@@ -988,6 +988,24 @@ applyPieceSet(currentPieceSet());
 applyBoardTheme(currentBoardTheme());
 start();
 
+// PWA freshness: vite-plugin-pwa's autoUpdate mode makes a new service
+// worker skipWaiting+clientsClaim, but the generated registerSW.js does
+// NOT reload the page when that happens -- so the already-open app keeps
+// running the old precached bundle until the NEXT full launch, and users
+// had to quit-and-reopen twice to see a deploy. Reload once automatically
+// when a new SW takes control -- but only on the splash screen: reloading
+// mid-game would silently destroy an in-progress (in-memory) game, which
+// is far worse than staying one deploy behind until the game ends.
+if ('serviceWorker' in navigator) {
+  let reloadedForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadedForUpdate) return;
+    if (document.querySelector('.game-layout')) return; // mid-game: skip
+    reloadedForUpdate = true;
+    window.location.reload();
+  });
+}
+
 // --- Dev-only tools: eyeball corrosion overlay rendering (marching,
 // stacking, class-3/purple) and exercise the promotion picker without
 // having to play through a full game. Dead-code-eliminated from production
