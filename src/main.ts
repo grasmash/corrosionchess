@@ -10,8 +10,18 @@ import './style.css';
 import { createBoardView } from './ui/boardview';
 import type { CgBoardView } from './ui/cgboard';
 import { renderOverlays } from './ui/overlays';
-import { showSetup, encodeConfig, decodeConfig, describeConfig, currentLastConfig, setLastConfig } from './ui/setup';
-import type { SetupResult } from './ui/setup';
+import type { SelectionInfo } from './ui/overlays';
+import {
+  showSetup,
+  encodeConfig,
+  decodeConfig,
+  describeConfig,
+  currentLastConfig,
+  setLastConfig,
+  currentLastPlayAs,
+  setLastPlayAs,
+} from './ui/setup';
+import type { SetupResult, PlayAs } from './ui/setup';
 import { renderHud, pickPromotion } from './ui/hud';
 import type { NetStatus } from './ui/hud';
 import { showBotSelect } from './ui/botselect';
@@ -511,11 +521,21 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
   // (mountOnlineGame is called anew each time -- see startHostGame/
   // startJoinGame -- so this local always starts fresh).
   let prevState: GameState | null = null;
+  // Corrosion-capture danger-ring affordance: the currently selected square
+  // and the dests computed for it, threaded into renderOverlays -- see
+  // BoardView.onSelect below and SelectionInfo in overlays.ts.
+  let selectedSq: number | null = null;
+  let lastDests: Map<number, number[]> = new Map();
+  function currentSelection(): SelectionInfo | null {
+    return selectedSq != null ? { sq: selectedSq, dests: lastDests.get(selectedSq) ?? [] } : null;
+  }
 
   function render(): void {
     const canMove = !state.result && state.turn === youAre && netStatus === 'open';
-    view.setState(state, canMove ? computeDests(state) : new Map());
-    renderOverlays(boardEl, view, state, prevState);
+    const dests = canMove ? computeDests(state) : new Map();
+    lastDests = dests;
+    view.setState(state, dests);
+    renderOverlays(boardEl, view, state, prevState, currentSelection());
     prevState = state;
     renderHud(hudEl, state, {
       youAre,
@@ -525,6 +545,15 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
       inviteUrl: params.inviteUrl,
     });
   }
+
+  // Re-renders just the overlay (danger-ring affordance) on every selection
+  // change -- safe to call this often; renderOverlays is idempotent/guarded
+  // against double-firing animations for an unchanged (prevState, state)
+  // pair (see its own doc comment).
+  view.onSelect(sq => {
+    selectedSq = sq;
+    renderOverlays(boardEl, view, state, prevState, currentSelection());
+  });
 
   function sendResyncFromHost(): void {
     session.send({ type: 'resync', seq: ply, state });
@@ -667,13 +696,27 @@ function startGame(setup: SetupResult): void {
   // Plan 001: see the matching comment in mountOnlineGame -- startGame() is
   // itself re-invoked fresh on "New game", so this local always starts null.
   let prevState: GameState | null = null;
+  // Corrosion-capture danger-ring affordance -- see the matching comment in
+  // mountOnlineGame.
+  let selectedSq: number | null = null;
+  let lastDests: Map<number, number[]> = new Map();
+  function currentSelection(): SelectionInfo | null {
+    return selectedSq != null ? { sq: selectedSq, dests: lastDests.get(selectedSq) ?? [] } : null;
+  }
 
   function render(): void {
-    view.setState(state, computeDests(state));
-    renderOverlays(boardEl, view, state, prevState);
+    const dests = computeDests(state);
+    lastDests = dests;
+    view.setState(state, dests);
+    renderOverlays(boardEl, view, state, prevState, currentSelection());
     prevState = state;
     renderHud(hudEl, state, { onNewGame: start });
   }
+
+  view.onSelect(sq => {
+    selectedSq = sq;
+    renderOverlays(boardEl, view, state, prevState, currentSelection());
+  });
 
   function playMove(move: Move): void {
     try {
@@ -754,6 +797,13 @@ function startBotGame(config: Config, persona: Persona): void {
   let prevState: GameState | null = null;
   let botThinking = false;
   const chatLog: string[] = [];
+  // Corrosion-capture danger-ring affordance -- see the matching comment in
+  // mountOnlineGame.
+  let selectedSq: number | null = null;
+  let lastDests: Map<number, number[]> = new Map();
+  function currentSelection(): SelectionInfo | null {
+    return selectedSq != null ? { sq: selectedSq, dests: lastDests.get(selectedSq) ?? [] } : null;
+  }
 
   function pushQuip(ev: QuipEvent, alwaysShow = false): void {
     // ~30% chance to stay silent on non-result events so the chat doesn't spam.
@@ -766,8 +816,10 @@ function startBotGame(config: Config, persona: Persona): void {
   }
 
   function render(): void {
-    view.setState(state, canHumanMove() ? computeDests(state) : new Map());
-    renderOverlays(boardEl, view, state, prevState);
+    const dests = canHumanMove() ? computeDests(state) : new Map();
+    lastDests = dests;
+    view.setState(state, dests);
+    renderOverlays(boardEl, view, state, prevState, currentSelection());
     prevState = state;
     renderHud(hudEl, state, {
       youAre: humanColor,
@@ -876,6 +928,11 @@ function startBotGame(config: Config, persona: Persona): void {
     render();
     if (!state.result) scheduleBotMove();
   }
+
+  view.onSelect(sq => {
+    selectedSq = sq;
+    renderOverlays(boardEl, view, state, prevState, currentSelection());
+  });
 
   view.onMove((from, to) => {
     if (!canHumanMove()) return;

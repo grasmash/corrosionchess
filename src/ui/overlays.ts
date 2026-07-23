@@ -15,6 +15,16 @@ const LAYER_CLASS = 'corrosion-overlay-layer';
 const VOID_LAYER_CLASS = 'corrosion-void-layer';
 const UNITS_LAYER_CLASS = 'corrosion-units-layer';
 const INFO_LAYER_CLASS = 'corrosion-info-layer';
+const DANGER_LAYER_CLASS = 'corrosion-danger-layer';
+
+/** The currently selected square and its legal destinations (from
+ * `computeDests`), threaded in from main.ts (via BoardView.onSelect, see
+ * cgboard.ts) so the danger-ring affordance below knows which destination
+ * squares to flag. `null`/absent when nothing is selected. */
+export interface SelectionInfo {
+  sq: number;
+  dests: number[];
+}
 
 type SquarePx = (sq: number) => { x: number; y: number; w: number };
 
@@ -362,6 +372,22 @@ function killPieceOnSquare(
 // see the exec report.
 const unitMaps = new WeakMap<HTMLDivElement, Map<number, UnitDivEntry[]>>();
 
+/**
+ * Tracks the last (prev, gs) pair whose piece-destroy events (see below)
+ * have already been turned into a `killPieceOnSquare` choreography, keyed
+ * by units-layer element. `renderOverlays` can legitimately be called more
+ * than once for the exact same (prev, gs) pair -- e.g. the danger-ring
+ * affordance re-renders on every selection change, which fires again right
+ * after a move completes (chessground's own `select` event covers both) --
+ * and without this guard, a re-render with an unchanged (prev, gs) would
+ * re-detect the same destroyed piece and spawn a second, duplicate ghost
+ * playing the kill choreography twice. The spawn/march/death per-unit loop
+ * above doesn't need this: it's already idempotent by construction (it
+ * diffs against the persisted DOM map, not against object identity), so
+ * calling it again with unchanged `gs.corrosions` just finds no changes.
+ */
+const lastProcessedTransition = new WeakMap<HTMLDivElement, { prev: GameState; gs: GameState }>();
+
 function renderUnits(
   unitsLayer: HTMLDivElement,
   gs: GameState,
@@ -547,7 +573,10 @@ function renderUnits(
   // passant, which vacates the captured pawn's square without the capturing
   // pawn ever landing there, so that case needs an explicit exclusion (see
   // isEnPassantVacate).
-  if (!firstRender && prev) {
+  const lastTransition = lastProcessedTransition.get(unitsLayer);
+  const alreadyProcessed = !!lastTransition && lastTransition.prev === prev && lastTransition.gs === gs;
+  if (!firstRender && prev && !alreadyProcessed) {
+    lastProcessedTransition.set(unitsLayer, { prev, gs });
     const prevCorrSquares = allCorrosionSquares(prev);
     const currCorrSquares = allCorrosionSquares(gs);
     const size = gs.size;
@@ -661,6 +690,60 @@ function renderInfo(infoLayer: HTMLDivElement, gs: GameState, squarePx: SquarePx
 }
 
 /**
+ * True when a corrosion cell at `sq` is hostile to `moverColor` -- i.e. the
+ * exact same rule legal.ts's `resolveCorrosionCapture` uses to decide
+ * whether landing there triggers the capture/mutual-destruction resolution
+ * (opposite color, or class-3 regardless of color). A square with only
+ * FRIENDLY non-class-3 corrosion is safe to land on (harmless
+ * co-occupancy per the README) and gets no danger-ring treatment.
+ */
+function hostileCorrosionAt(gs: GameState, sq: number, moverColor: Color): boolean {
+  return gs.corrosions.some(u => u.cells.includes(sq) && (u.cls === 3 || u.color !== moverColor));
+}
+
+/**
+ * The danger/safe-capture ring affordance: for the currently selected piece
+ * (if any), flags every one of its legal destination squares that holds
+ * HOSTILE corrosion. A king gets a visually distinct "safe capture" ring
+ * instead of a danger one -- kings destroy any hostile corrosion they land
+ * on for free (see legal.ts's resolveCorrosionCapture: `!moverIsKing` is
+ * what gates the mover itself also being destroyed), everything else dies
+ * along with the corrosion it captures. Rendered in its own topmost
+ * sublayer (see renderOverlays) so it's never washed out by a unit's own
+ * blob/badges/void sitting underneath it, and is always fully rebuilt
+ * (`replaceChildren`) each call since it has no persistent-across-renders
+ * state to preserve -- unlike the units layer, there's nothing here to
+ * animate BETWEEN renders, only to show or hide per the current selection.
+ */
+function renderDanger(dangerLayer: HTMLDivElement, gs: GameState, selection: SelectionInfo | null | undefined, squarePx: SquarePx, board: DOMRect): void {
+  dangerLayer.replaceChildren();
+  if (!selection) return;
+
+  const piece = gs.board[selection.sq];
+  if (!piece) return; // stale selection (e.g. the piece there got captured/moved since it was selected)
+
+  const isKing = piece.type === 'k';
+
+  for (const dest of selection.dests) {
+    if (!hostileCorrosionAt(gs, dest, piece.color)) continue;
+    const pos = squarePx(dest);
+    const marker = document.createElement('div');
+    marker.className = `corrosion-danger-marker corrosion-danger-marker--${isKing ? 'safe' : 'hostile'}`;
+    marker.style.left = `${pos.x - board.left}px`;
+    marker.style.top = `${pos.y - board.top}px`;
+    marker.style.width = `${pos.w}px`;
+    marker.style.height = `${pos.w}px`;
+
+    const badge = document.createElement('div');
+    badge.className = 'corrosion-danger-badge';
+    badge.textContent = isKing ? '🛡' : '☠';
+    marker.appendChild(badge);
+
+    dangerLayer.appendChild(marker);
+  }
+}
+
+/**
  * Renders the pointer-events:none overlay layer for corrosion units and
  * purple squares on top of the board rendered by `view`.
  *
@@ -674,8 +757,24 @@ function renderInfo(infoLayer: HTMLDivElement, gs: GameState, squarePx: SquarePx
  * animation: march (a unit's square changed), spawn (new unit key), death
  * (unit key gone), piece corrode-out (a piece vanished on a corrosion
  * square), and purple etch-in (a square newly added to `gs.purple`).
+ *
+ * `selection`, when present, is the currently selected square and its legal
+ * destinations (see SelectionInfo) -- drives the danger/safe-capture ring
+ * affordance on hostile-corrosion destination squares. Callers should
+ * re-invoke `renderOverlays` with the SAME `gs`/`prev` whenever selection
+ * changes (see BoardView.onSelect) to keep this in sync as the player
+ * clicks around, independent of a full game-state re-render; that's safe to
+ * do repeatedly -- everything else in this function is either idempotent
+ * (the units diff) or explicitly guarded against double-firing for an
+ * unchanged (prev, gs) pair (the piece-destroy choreography).
  */
-export function renderOverlays(container: HTMLElement, view: BoardView, gs: GameState, prev?: GameState | null): void {
+export function renderOverlays(
+  container: HTMLElement,
+  view: BoardView,
+  gs: GameState,
+  prev?: GameState | null,
+  selection?: SelectionInfo | null
+): void {
   const layer = ensureLayer(container);
 
   const { boardPx, squarePx } = view.squareEl();
@@ -688,14 +787,18 @@ export function renderOverlays(container: HTMLElement, view: BoardView, gs: Game
 
   // DOM order matters here -- see the comment above renderVoid -- and
   // ensureSublayer only creates a layer once and appends in call order, so
-  // this order (void, then units, then info) is also the paint order:
-  // purple base tint at the bottom, corrosion units above it, badges/skull
-  // on top of everything.
+  // this order (void, units, info, danger) is also the paint order: purple
+  // base tint at the bottom, corrosion units above it, badges/skull above
+  // that, and the selection-driven danger/safe ring topmost of all -- it's
+  // an active input affordance the player needs to see clearly regardless
+  // of whatever else is happening on that square.
   const voidLayer = ensureSublayer(layer, VOID_LAYER_CLASS);
   const unitsLayer = ensureSublayer(layer, UNITS_LAYER_CLASS);
   const infoLayer = ensureSublayer(layer, INFO_LAYER_CLASS);
+  const dangerLayer = ensureSublayer(layer, DANGER_LAYER_CLASS);
 
   renderVoid(voidLayer, gs, prev, squarePx, board);
   renderUnits(unitsLayer, gs, prev, squarePx, board);
   renderInfo(infoLayer, gs, squarePx, board);
+  renderDanger(dangerLayer, gs, selection, squarePx, board);
 }

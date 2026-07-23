@@ -305,7 +305,8 @@ cg-board square.selected {
 
 .corrosion-void-layer,
 .corrosion-units-layer,
-.corrosion-info-layer {
+.corrosion-info-layer,
+.corrosion-danger-layer {
   position: absolute;
   inset: 0;
 }
@@ -1032,6 +1033,68 @@ cg-board square.selected {
 .corrosion-badge--tr { top: 2px; right: 2px; }
 .corrosion-badge--bl { bottom: 2px; left: 2px; }
 .corrosion-badge--br { bottom: 2px; right: 2px; }
+
+/* --- Corrosion-capture danger/safe-capture ring affordance --- */
+
+/* `.corrosion-danger-layer` itself is the topmost sublayer of
+ * `.corrosion-overlay-layer` (see renderOverlays in overlays.ts) -- MUST
+ * stay pointer-events:none like every other overlay sublayer, or it would
+ * sit on top of the board and swallow the very clicks/drags it's meant to
+ * be informing. */
+.corrosion-danger-marker {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ring inset from the square edges (not a full-square border) so it reads
+ * as a targeting reticle around the destination, distinct from a plain
+ * chessground move-dot. Color/glow are the only difference between the two
+ * variants -- hostile (red, "this will destroy your piece") and safe
+ * (green, a king's free capture) -- both otherwise identical shape/size. */
+.corrosion-danger-marker::before {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 3px solid rgb(255 60 40 / 0.9);
+  box-shadow: 0 0 8px rgb(255 60 40 / 0.8);
+}
+
+.corrosion-danger-marker--safe::before {
+  border-color: rgb(120 220 120 / 0.9);
+  box-shadow: 0 0 8px rgb(120 220 120 / 0.8);
+}
+
+.corrosion-danger-badge {
+  position: relative;
+  font-size: 0.9em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Static ring under reduced motion -- no pulse keyframe applied at all
+ * (the `no-preference` media query below is the only place that adds it),
+ * consistent with every other continuous animation in this file. */
+@media (prefers-reduced-motion: no-preference) {
+  .corrosion-danger-marker::before {
+    animation: danger-ring-pulse 1.1s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes danger-ring-pulse {
+  from {
+    scale: 0.92;
+    opacity: 0.75;
+  }
+  to {
+    scale: 1.06;
+    opacity: 1;
+  }
+}
 
 #dev-tools {
   display: flex;

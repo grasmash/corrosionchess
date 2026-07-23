@@ -93,6 +93,7 @@ export function createCgBoardView(size: number): CgBoardView {
   let boardEl: HTMLElement | null = null;
   let orientation: Color = 'w';
   let moveCb: ((from: number, to: number) => void) | null = null;
+  let selectCb: ((sq: number | null) => void) | null = null;
 
   function mount(el: HTMLElement): void {
     wrapEl = el;
@@ -117,6 +118,22 @@ export function createCgBoardView(size: number): CgBoardView {
       premovable: { enabled: false },
       draggable: { enabled: true, showGhost: true },
       selectable: { enabled: true },
+      events: {
+        // `select` fires for every click/tap attempt regardless of outcome
+        // (select.js's select() calls it unconditionally before resolving
+        // select/deselect/move), so it can't be read as "the new selection"
+        // directly -- queueMicrotask defers to right after that same
+        // synchronous call finishes settling `state.selectable.selected`
+        // (including running a completed move's own cleanup, which clears
+        // it back to undefined), so this always reports the final,
+        // settled selection rather than a stale mid-click value.
+        select: () => {
+          queueMicrotask(() => {
+            const selected = api?.state.selectable.selected;
+            selectCb?.(typeof selected === 'string' ? keyToSq(selected, size) : null);
+          });
+        },
+      },
     };
     api = Chessground(el, config);
     boardEl = el.querySelector('cg-board');
@@ -140,6 +157,10 @@ export function createCgBoardView(size: number): CgBoardView {
     moveCb = cb;
   }
 
+  function onSelect(cb: (sq: number | null) => void): void {
+    selectCb = cb;
+  }
+
   function setOrientation(c: Color): void {
     orientation = c;
     api?.set({ orientation: colorToCg(c) });
@@ -160,5 +181,5 @@ export function createCgBoardView(size: number): CgBoardView {
     };
   }
 
-  return { mount, setState, onMove, setOrientation, squareEl, api: () => api };
+  return { mount, setState, onMove, onSelect, setOrientation, squareEl, api: () => api };
 }
