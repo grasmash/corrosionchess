@@ -27,11 +27,11 @@ it('manifest lists classic first, unique ids, and includes all six generated set
   expect(new Set(ids).size).toBe(ids.length);
   expect(ids[0]).toBe('classic');
   expect(PIECE_SETS[0].builtin).toBe(true);
-  for (const id of ['fireice', 'halloween', 'pets', 'dessert', 'mythical', 'robots']) {
+  for (const id of ['fireice', 'halloween', 'pets', 'dessert', 'mythical', 'robots', 'aliens', 'medieval', 'greek', 'dinosaurs']) {
     expect(ids).toContain(id);
   }
-  // Incomplete art (christmas/greek/aliens/medieval/dinosaurs) must not be listed.
-  for (const id of ['christmas', 'greek', 'aliens', 'medieval', 'dinosaurs']) {
+  // Incomplete art must not be listed (christmas pending its identity fixes).
+  for (const id of ['christmas']) {
     expect(ids).not.toContain(id);
   }
 });
