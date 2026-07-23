@@ -42,6 +42,11 @@ File convention consumed by the app: `public/pieces/<theme>/{wk,wq,wr,wb,wn,wp,b
    green swatches, and the two sides must be instantly distinguishable.
 4. **Rate limits:** shared tokens 429 under parallel use; the script backs off
    automatically. Avoid >2 concurrent set generations.
-5. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
+5. **The crown/tiara concept itself triggers flux's cross bias** on tall
+   regal pieces — even fully positive spike/tiara wording can still summon a
+   cross above it. When a queen keeps growing a cross after 2 retries, drop
+   the crown shape entirely: use soft, non-geometric toppers (flame wisps,
+   frosting swirl, flowing hair/energy) — verified fix on multiple themes.
+6. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
    renders a plain classic piece — check that the theme actually appears on
    every piece, not just that the silhouette is right.
