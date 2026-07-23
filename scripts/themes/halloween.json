@@ -1,0 +1,29 @@
+{
+  "name": "halloween",
+  "stylePhrase": "spooky Halloween 3D game asset render, glossy toon-realistic surface, dramatic rim lighting, consistent top-left studio lighting, ornate, intricate surface detail, richly decorated",
+  "sides": {
+    "w": {
+      "label": "ghost spirit",
+      "palette": "spectral pale white and mint glow, carved bone motifs etched into the surface, wispy translucent ghost-sheet drapery, soft ethereal glow along the edges"
+    },
+    "b": {
+      "label": "witch's pumpkin",
+      "palette": "jack-o-lantern orange and deep witchy purple-black, glowing carved grin motifs, green ember glow along the edges"
+    }
+  },
+  "pieces": {
+    "k": "a {SIDE} monarch draped in ornately carved regalia",
+    "q": "a {SIDE} sovereign wreathed in curling ectoplasmic wisps, more slender than the king",
+    "r": "a cozy painted {SIDE} tower with carved bone or pumpkin-rind detailing",
+    "b": "a hooded {SIDE} occult sage with an ornately etched robe",
+    "n": "a {SIDE} steed skull with carved detailing along the neck",
+    "p": "a small {SIDE}, the shortest piece, with richly carved surface detail on its base"
+  },
+  "promptOverrides": {
+    "wq": "single chess QUEEN game piece, clearly recognizable classic chess queen silhouette, a tall slender ghost spirit sovereign, more slender than the king, topped with soft curling ectoplasmic flame-wisps rising from the head, no crown band, no spikes, nothing geometric at the top, the wisps are the very top of the piece, spectral pale white and mint glow, carved bone motifs etched into the flowing ghost-sheet drapery below, soft ethereal glow along the edges, spooky Halloween 3D game asset render, glossy toon-realistic surface, dramatic rim lighting, consistent top-left studio lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text",
+    "bp": "single chess PAWN game piece, clearly recognizable classic chess pawn silhouette, the shortest piece on the board, a round jack-o-lantern pumpkin head with a small green stem is the very top of the piece, nothing above the pumpkin, glowing carved grin face, deep witchy purple-black richly carved base with faint glowing grin motifs, green ember glow along the edges, spooky Halloween 3D game asset render, glossy toon-realistic surface, dramatic rim lighting, consistent top-left studio lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text",
+    "wr": "single chess ROOK game piece, clearly recognizable classic chess rook silhouette, a cozy painted stone tower with a flat top cut with square crenellation notches, the flat notched rim is the very top of the piece, carved bone-relief patterns lining the shaft, spectral pale white and mint glow, soft ethereal glow along the edges, spooky Halloween 3D game asset render, glossy toon-realistic surface, dramatic rim lighting, consistent top-left studio lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text",
+    "br": "single chess ROOK game piece, clearly recognizable classic chess rook silhouette, a cozy painted pumpkin-patch tower with a flat top cut with square crenellation notches, the flat notched rim is the very top of the piece, carved jack-o-lantern grin patterns lining the shaft, jack-o-lantern orange and deep witchy purple-black, green ember glow along the edges, spooky Halloween 3D game asset render, glossy toon-realistic surface, dramatic rim lighting, consistent top-left studio lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text",
+    "wb": "single chess BISHOP game piece, clearly recognizable classic chess bishop silhouette, a smooth teardrop mitre head with a single diagonal slit, the smooth tip is the very top of the piece, soft drooping ghost-sheet hood draping down from the mitre, carved bone filigree along the robe, spectral pale white and mint glow, soft ethereal glow along the edges, spooky Halloween 3D game asset render, glossy toon-realistic surface, dramatic rim lighting, consistent top-left studio lighting, ornate, intricate surface detail, richly decorated, centered composition, plain solid gray studio background, no ground shadow, no text"
+  }
+}

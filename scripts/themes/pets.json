@@ -1,0 +1,22 @@
+{
+  "name": "pets",
+  "stylePhrase": "adorable photorealistic 3D game asset render, soft fur detail, warm studio lighting, consistent top-left lighting, ornate, intricate surface detail, richly decorated",
+  "sides": {
+    "w": {
+      "label": "golden retriever puppy",
+      "palette": "warm golden retriever fur, warm honey-gold tones, soft fluffy fur texture, expressive eyes"
+    },
+    "b": {
+      "label": "black cat",
+      "palette": "sleek charcoal-black cat fur, amber eyes, glossy short fur texture, expressive whiskers"
+    }
+  },
+  "pieces": {
+    "k": "a {SIDE} crowned with an ornately detailed collar and crown",
+    "q": "a {SIDE} wearing an open ring tiara of five sharp points, hollow middle, sky visible between the points, more slender than the king",
+    "r": "a cozy painted brick {SIDE} den tower with an ornately weathered brick texture, the pet peeking out of an archway",
+    "b": "a hooded {SIDE} mystic wrapped in an ornately embroidered robe",
+    "n": "a {SIDE} head in dynamic side profile, the only figural piece, with a richly detailed collar",
+    "p": "a small {SIDE} head, the shortest piece, bare furry head with zero headwear, on a richly detailed base"
+  }
+}
