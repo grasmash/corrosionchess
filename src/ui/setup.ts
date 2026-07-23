@@ -114,6 +114,12 @@ export function showSetup(
   const tier3 = makeToggle('tier3', 'Tier 3 corrosion');
   const bigBoard = makeToggle('bigBoard', 'Enlarged board (12x12)');
 
+  // Default game options (user request): Tier 1 + Tier 2 on, Tier 3 off.
+  // Board size stays off (8x8) by default. Set before syncTierChain() runs
+  // so it computes tier3's disabled state from these, not from all-unchecked.
+  tier1.input.checked = true;
+  tier2.input.checked = true;
+
   // Dependency chain: tier N requires tier N-1. Enforce in the change
   // handlers (not just via a one-time `disabled` computed at render time)
   // so unchecking a lower tier immediately cascades to the ones above it.
