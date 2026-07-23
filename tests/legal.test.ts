@@ -83,3 +83,21 @@ it('scholars mate leaves black with zero legal moves and inCheck', () => {
     .flatMap(i => legalMoves(s, i));
   expect(all).toEqual([]);
 });
+
+it("black move whose corrosion phase destroys black's own shield is illegal (no self-check)", () => {
+  const s = empty8();
+  put(s, 'a1', 'w', 'k'); put(s, 'e1', 'w', 'r');
+  put(s, 'e8', 'b', 'k'); put(s, 'e5', 'b', 'n'); put(s, 'h7', 'b', 'p');
+  // White corrosion at e4, born in an earlier round: after ANY black move it
+  // marches to e5 and destroys the knight, discovering the e1 rook's check
+  // on e8 -- with the round over and white to move. Ending the round in
+  // check like that must be illegal, exactly like moving a pinned piece.
+  s.corrosions = [{ id: 1, color: 'w', cls: 1, cells: [fromAlg('e4', 8)], dir: 1, bornRound: 1 }];
+  s.round = 5;
+  s.turn = 'b';
+  expect(legalMoves(s, fromAlg('h7', 8))).toEqual([]);
+  // Moves that resolve the coming check stay legal: stepping the king off
+  // the e-file, or the knight capturing the corrosion cell (dying to it,
+  // but leaving no march onto e5).
+  expect(legalMoves(s, fromAlg('e8', 8)).map(m => m.to)).toContain(fromAlg('d8', 8));
+});

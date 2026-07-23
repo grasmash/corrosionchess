@@ -1,6 +1,7 @@
 import type { GameState, Move, Color, CorrosionUnit, PieceType } from './types';
 import { fileOf, rankOf, sq, offsetOf, toAlg } from './board';
 import { pseudoMoves, isAttacked } from './movegen';
+import { corrosionPhase } from './corrosion';
 
 const PIECE_NAMES: Record<PieceType, string> = {
   p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King',
@@ -176,6 +177,15 @@ export function legalMoves(s: GameState, from?: number): Move[] {
     for (const m of pseudoMoves(s, f)) {
       const clone = structuredClone(s);
       applyMoveCore(clone, m);
+      // Mirror applyMove's full sequence: black's move completes the round,
+      // so the corrosion phase fires before black's turn truly ends. A move
+      // is only legal if the mover is safe AFTER that phase too — otherwise
+      // a corrosion strike destroying the mover's own shielding piece would
+      // let them end the round in (self-)check, with the opponent to move.
+      // The phase is deterministic from the pre-move state, so this is the
+      // same "no moving into check" rule, just measured at the real end of
+      // the mover's turn.
+      if (piece.color === 'b') corrosionPhase(clone);
       if (!inCheck(clone, piece.color)) {
         result.push(m);
       }
