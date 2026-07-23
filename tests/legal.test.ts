@@ -61,6 +61,17 @@ it('suicidal corrosion capture that exposes king is illegal', () => {
   expect(legalMoves(s, fromAlg('e2', 8)).map(m => m.to)).not.toContain(fromAlg('a2', 8));
 });
 
+it('no phantom en passant when double-pushing pawn is destroyed by corrosion', () => {
+  const s = empty8();
+  put(s, 'e2', 'w', 'p'); put(s, 'd4', 'b', 'p');
+  put(s, 'a1', 'w', 'k'); put(s, 'h8', 'b', 'k');
+  s.corrosions = [{ id: 1, color: 'b', cls: 1, cells: [fromAlg('e4', 8)], dir: -1, bornRound: 0 }];
+  applyMoveCore(s, mv(s, 'e2', 'e4'));
+  expect(s.board[fromAlg('e4', 8)]).toBeNull();
+  expect(s.corrosions).toEqual([]);
+  expect(s.epSquare).toBeNull();
+});
+
 it('scholars mate leaves black with zero legal moves and inCheck', () => {
   const s = initialState(cfg);
   const play = (a: string, b: string) => applyMoveCore(s, mv(s, a, b));

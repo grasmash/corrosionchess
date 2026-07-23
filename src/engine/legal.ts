@@ -1,4 +1,4 @@
-import type { GameState, Move, Color } from './types';
+import type { GameState, Move, Color, CorrosionUnit } from './types';
 import { fileOf, rankOf, sq, offsetOf } from './board';
 import { pseudoMoves, isAttacked } from './movegen';
 
@@ -21,7 +21,7 @@ export function inCheck(s: GameState, color: Color): boolean {
 // destroyed (and thus should not remain on the board).
 function resolveCorrosionCapture(s: GameState, to: number, moverColor: Color, moverIsKing: boolean): boolean {
   let destroyedMover = false;
-  const remaining = [];
+  const remaining: CorrosionUnit[] = [];
   for (const unit of s.corrosions) {
     const idx = unit.cells.indexOf(to);
     if (idx === -1) {
@@ -112,8 +112,10 @@ export function applyMoveCore(s: GameState, m: Move): void {
     if (pIdx !== -1) s.purple.splice(pIdx, 1);
   }
 
-  // epSquare set on double-push, cleared otherwise
-  if (isDoublePush) {
+  // epSquare set on double-push, cleared otherwise. If the double-pushing
+  // pawn was itself destroyed by hostile corrosion on landing, there is no
+  // pawn left to capture en passant, so leave epSquare null.
+  if (isDoublePush && !destroyedMover) {
     const dir = color === 'w' ? 1 : -1;
     s.epSquare = sq(fileOf(m.from, size), rankOf(m.from, size) + dir, size);
   } else {
