@@ -380,10 +380,18 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
   view.mount(boardEl);
   view.setOrientation(youAre);
 
+  // Plan 001: the state before the last applied move, so renderOverlays can
+  // diff for spawn/march/death/corrode-out animations. null on the first
+  // render (no entry animations) and reset whenever a fresh game mounts
+  // (mountOnlineGame is called anew each time -- see startHostGame/
+  // startJoinGame -- so this local always starts fresh).
+  let prevState: GameState | null = null;
+
   function render(): void {
     const canMove = !state.result && state.turn === youAre && netStatus === 'open';
     view.setState(state, canMove ? computeDests(state) : new Map());
-    renderOverlays(boardEl, view, state);
+    renderOverlays(boardEl, view, state, prevState);
+    prevState = state;
     renderHud(hudEl, state, {
       youAre,
       netStatus,
@@ -527,9 +535,14 @@ function startGame(setup: SetupResult): void {
   const view = createBoardView(state.size);
   view.mount(boardEl);
 
+  // Plan 001: see the matching comment in mountOnlineGame -- startGame() is
+  // itself re-invoked fresh on "New game", so this local always starts null.
+  let prevState: GameState | null = null;
+
   function render(): void {
     view.setState(state, computeDests(state));
-    renderOverlays(boardEl, view, state);
+    renderOverlays(boardEl, view, state, prevState);
+    prevState = state;
     renderHud(hudEl, state, { onNewGame: start });
   }
 
