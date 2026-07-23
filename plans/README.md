@@ -9,7 +9,7 @@ fully before starting, honor its STOP conditions, and update your row when done.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | Animated corrosion VFX (spawn/march/dissolve, piece corrode-out, purple void) | P1 | M | — | IN PROGRESS |
-| 002  | Full move log in chess notation + missing corrosion events | P1 | M | — | IN PROGRESS |
+| 002  | Full move log in chess notation + missing corrosion events | P1 | M | — | DONE |
 | 003  | Bot personas — chess.com-style roster with personalities | P1 | L | 001, 002 | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with rationale)
