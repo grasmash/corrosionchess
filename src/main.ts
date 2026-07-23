@@ -311,12 +311,15 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
   let netStatus: NetStatus = 'connecting';
 
   appEl.innerHTML = '';
+  const layout = document.createElement('div');
+  layout.className = 'game-layout';
   const boardEl = document.createElement('div');
   boardEl.className = 'board-wrap';
   boardEl.id = 'board';
   const hudEl = document.createElement('div');
   hudEl.id = 'hud';
-  appEl.append(boardEl, hudEl);
+  layout.append(boardEl, hudEl);
+  appEl.appendChild(layout);
 
   const view = createBoardView(state.size);
   view.mount(boardEl);
@@ -449,12 +452,15 @@ function startGame(setup: SetupResult): void {
   let state: GameState = newGame(setup.config);
 
   appEl.innerHTML = '';
+  const layout = document.createElement('div');
+  layout.className = 'game-layout';
   const boardEl = document.createElement('div');
   boardEl.className = 'board-wrap';
   boardEl.id = 'board';
   const hudEl = document.createElement('div');
   hudEl.id = 'hud';
-  appEl.append(boardEl, hudEl);
+  layout.append(boardEl, hudEl);
+  appEl.appendChild(layout);
 
   const view = createBoardView(state.size);
   view.mount(boardEl);
