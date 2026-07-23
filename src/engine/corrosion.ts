@@ -1,4 +1,4 @@
-import type { CorrosionUnit, GameState } from './types';
+import type { CorrosionUnit, GameState, PieceType } from './types';
 import { rankOf, toAlg } from './board';
 
 export function addPurple(s: GameState, sq: number): void {
@@ -7,6 +7,19 @@ export function addPurple(s: GameState, sq: number): void {
 
 function hostile(a: CorrosionUnit, b: CorrosionUnit): boolean {
   return a.color !== b.color || a.cls === 3 || b.cls === 3;
+}
+
+const PIECE_NAMES: Record<PieceType, string> = {
+  p: 'pawn',
+  n: 'knight',
+  b: 'bishop',
+  r: 'rook',
+  q: 'queen',
+  k: 'king',
+};
+
+function pieceName(t: PieceType): string {
+  return PIECE_NAMES[t];
 }
 
 export function corrosionPhase(s: GameState): void {
@@ -75,37 +88,43 @@ export function corrosionPhase(s: GameState): void {
     }
   }
 
-  // 5. Same-square annihilation: group surviving moved cells by square; if a
-  //    square holds cells from two units hostile to each other, destroy ALL
-  //    cells on that square.
-  const bySquare = new Map<number, Moved[]>();
-  for (const m of moved) {
-    if (destroyed.has(m)) continue;
-    const arr = bySquare.get(m.to) ?? [];
-    arr.push(m);
-    bySquare.set(m.to, arr);
+  for (const m of destroyed) {
+    m.unit.cells = m.unit.cells.filter(c => c !== m.to);
   }
-  for (const [, group] of bySquare) {
+  s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
+
+  // 5. Same-square annihilation: group ALL surviving cells (movers AND
+  //    dormant born-this-round units — a corrosion of one color intersecting
+  //    a corrosion of another destroys both, whether or not either moved) by
+  //    square; if a square holds cells from two units hostile to each other,
+  //    destroy ALL cells on that square.
+  const cellOwners = new Map<number, CorrosionUnit[]>();
+  for (const u of s.corrosions) {
+    for (const c of u.cells) {
+      const arr = cellOwners.get(c) ?? [];
+      arr.push(u);
+      cellOwners.set(c, arr);
+    }
+  }
+  for (const [square, owners] of cellOwners) {
     let anyHostilePair = false;
-    for (let i = 0; i < group.length && !anyHostilePair; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        if (group[i].unit !== group[j].unit && hostile(group[i].unit, group[j].unit)) {
+    for (let i = 0; i < owners.length && !anyHostilePair; i++) {
+      for (let j = i + 1; j < owners.length; j++) {
+        if (owners[i] !== owners[j] && hostile(owners[i], owners[j])) {
           anyHostilePair = true;
           break;
         }
       }
     }
     if (anyHostilePair) {
-      for (const m of group) destroyed.add(m);
+      for (const u of owners) u.cells = u.cells.filter(c => c !== square);
     }
-  }
-
-  for (const m of destroyed) {
-    m.unit.cells = m.unit.cells.filter(c => c !== m.to);
   }
   s.corrosions = s.corrosions.filter(u => u.cells.length > 0);
 
-  const survivors = moved.filter(m => !destroyed.has(m) && m.unit.cells.includes(m.to));
+  // Recompute survivors (movers only, per steps 6-7) now that steps 4-5 have
+  // finished destroying cells.
+  const survivors = moved.filter(m => m.unit.cells.includes(m.to));
 
   // 6. Purple deaths: any cell of cls 1/2 standing on purple is destroyed
   //    (cls 3 immune).
@@ -129,11 +148,11 @@ export function corrosionPhase(s: GameState): void {
     } else if (m.unit.cls === 3) {
       s.board[m.to] = null;
       m.unit.cells = m.unit.cells.filter(c => c !== m.to);
-      s.log.push({ round: s.round, text: `Corrosion destroys ${p.type} at ${alg}` });
+      s.log.push({ round: s.round, text: `Corrosion destroys ${pieceName(p.type)} at ${alg}` });
     } else if (p.color !== m.unit.color) {
       s.board[m.to] = null;
       m.unit.cells = m.unit.cells.filter(c => c !== m.to);
-      s.log.push({ round: s.round, text: `Corrosion destroys ${p.type} at ${alg}` });
+      s.log.push({ round: s.round, text: `Corrosion destroys ${pieceName(p.type)} at ${alg}` });
     }
     // else: cls 1/2 && friendly — nothing (co-occupies)
   }

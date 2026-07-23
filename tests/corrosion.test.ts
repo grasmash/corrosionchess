@@ -91,6 +91,16 @@ it('same color stacks and passes through', () => {
   expect(s.corrosions.find(u => u.id === 2)!.cells).toEqual([fromAlg('d4', 8)]);
 });
 
+it('dormant unit is destroyed by same-square annihilation with a mover', () => {
+  const s = base();
+  s.corrosions = [
+    unit({ id: 1, color: 'w', dir: 1, cells: [fromAlg('d4', 8)] }),
+    unit({ id: 2, color: 'b', dir: -1, cells: [fromAlg('d5', 8)], bornRound: s.round }),
+  ];
+  corrosionPhase(s);
+  expect(s.corrosions).toEqual([]);
+});
+
 it('non-class-3 corrosion dies entering purple', () => {
   const s = base();
   s.purple = [fromAlg('d5', 8)];
