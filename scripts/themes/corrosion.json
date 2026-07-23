@@ -1,0 +1,22 @@
+{
+  "name": "corrosion",
+  "stylePhrase": "dark toxic-wasteland 3D game asset render, high detail, dramatic acid-green rim lighting, consistent top-left lighting, ornate intricate corroded surface detail, deeply pitted and eaten-away material with glowing acid etching covering the entire body of the piece, not just the color palette",
+  "sides": {
+    "w": {
+      "label": "pale corroded-stone",
+      "palette": "weathered pale gray-green stone and oxidized silver, chalky mineral crust, soft glowing pale-mint acid veins seeping through cracks"
+    },
+    "b": {
+      "label": "blackened corroded-iron",
+      "palette": "near-black rusted iron with flaking oxide scale, vivid glowing toxic-green acid drips and molten veins pooling in the pits"
+    }
+  },
+  "pieces": {
+    "k": "a {SIDE} chess king, the small cross finial at the very top is half-dissolved and dripping, its edges eaten ragged by acid, the body below deeply pitted with glowing acid runnels streaming down from the collar",
+    "q": "a {SIDE} chess queen, topped with soft rising wisps of glowing acid vapor instead of a crown, the body wrapped in melted, sagging drip folds like a candle corroded by acid rain",
+    "r": "a {SIDE} chess rook tower, the flat notched rim is the very top, crumbling brickwork with whole bricks dissolved away leaving glowing acid-eaten cavities, acid pooling between the crenellations",
+    "b": "a {SIDE} chess bishop, the smooth mitre head is scarred by a deep glowing acid channel running down its face like a burn, the body streaked with long corrosion drip trails",
+    "n": "a {SIDE} chess knight horse head profile, the mane dissolved into dripping strands of glowing acid, the muzzle and neck pocked with corrosion pits and flaking scale",
+    "p": "a small {SIDE} chess pawn, the shortest and humblest piece, the bare dome is the very top of the piece, its surface half-eaten by acid pitting with one bright glowing droplet running down the side"
+  }
+}

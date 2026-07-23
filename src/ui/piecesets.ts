@@ -24,6 +24,7 @@ export const PIECE_SETS: PieceSet[] = [
   { id: 'greek', label: 'Gods vs Titans' },
   { id: 'dinosaurs', label: 'Dinosaurs' },
   { id: 'christmas', label: 'Christmas' },
+  { id: 'corrosion', label: 'Corrosion' },
 ];
 
 const STORAGE_KEY = 'pieceset';
