@@ -56,6 +56,13 @@ File convention consumed by the app: `public/pieces/<theme>/{wk,wq,wr,wb,wn,wp,b
    OTHER side (which passed) and recolor it into the failing side's palette
    with `flux-kontext-pro` (image editing) — shape stays correct, only the
    palette changes. Verified fix (fireice black bishop after 4 failed rolls).
-8. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
+8. **Embellish the body, never the topper.** Identity rules keep silhouettes
+   readable but can produce plain, uninspired pieces (especially pawns).
+   Richness goes in SURFACE detail: engraved patterns, filigree, jeweled or
+   theme-flavored accents, material texture, ornate bases — while the top
+   stays exactly per the identity rule (pawn dome stays bare, but the dome
+   can be beautifully textured/patterned and the body/base ornate). Add
+   "ornate, intricate surface detail, richly decorated" to stylePhrase.
+9. **Species/theme drop-out:** on themed sets (e.g. animals), flux sometimes
    renders a plain classic piece — check that the theme actually appears on
    every piece, not just that the silhouette is right.
