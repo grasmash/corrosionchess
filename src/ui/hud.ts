@@ -164,7 +164,17 @@ export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {})
   }
   body.appendChild(log);
   el.appendChild(body);
-  log.scrollTop = log.scrollHeight;
+  // Deferred to the next frame (not set synchronously right after the DOM
+  // rebuild above): now that `.hud-log` sits in a bounded flex/max-height
+  // chain (see style.css's SIDEBAR/game-layout rules) instead of an
+  // unbounded one, `scrollHeight` read synchronously in the same tick as
+  // this DOM mutation can reflect a not-yet-fully-resolved layout pass --
+  // observed as autoscroll consistently landing short of the true bottom.
+  // rAF runs after the browser's next layout, so `scrollHeight` (and the
+  // clamp against the now-settled `clientHeight`) are both final.
+  requestAnimationFrame(() => {
+    log.scrollTop = log.scrollHeight;
+  });
 
   const actions = document.createElement('div');
   actions.className = 'sidebar-actions';

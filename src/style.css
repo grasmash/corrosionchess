@@ -72,6 +72,13 @@ h1 {
   flex-direction: column;
   gap: 0.6rem;
   align-items: center;
+  /* Opts OUT of `.game-layout`'s `align-items: stretch` -- without this, an
+   * unbounded sidebar (e.g. a long move log) drags board-column's height up
+   * to match it via stretch, even though board-column's own content
+   * (player bars + the fixed-size board) never changes size. Pinning this
+   * to its natural content height is what lets `.sidebar-panel`'s
+   * max-height below actually act as a ceiling instead of a suggestion. */
+  align-self: flex-start;
 }
 
 .player-bar {
@@ -1211,6 +1218,32 @@ input[type='text'] {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   align-self: stretch;
+  /* Bug fix: a long move log used to inflate this card's height without
+   * bound, dragging the whole page (and board-column, via stretch -- see
+   * its `align-self: flex-start` override above) along with it instead of
+   * scrolling internally. `min(90vw, 640px)` mirrors `.board-wrap`'s own
+   * square-size formula so this card is capped to roughly the board's
+   * rendered height side-by-side; `+ 5rem` accounts for the two player-bar
+   * rows + gaps stacked above/below the board that aren't part of that
+   * square. `overflow: hidden` (already set above) can only actually clip
+   * content once this box has a definite/bounded height -- without a
+   * max-height, "hidden" was a no-op, since the box just grew to fit
+   * whatever its content demanded. */
+  max-height: calc(min(90vw, 640px) + 5rem);
+}
+
+/* Narrow/stacked layout (plan: bounded scrolling move log): once
+ * `.game-layout`'s `flex-wrap` drops the sidebar onto its own line below
+ * the board, matching the board's rendered height no longer makes sense --
+ * the board is now full-width above it, not beside it. Cap the sidebar to
+ * a fixed viewport fraction instead so there's always room to see the
+ * board without the log pushing it off-screen. 900px is comfortably above
+ * where `.game-layout` actually wraps (board-wrap max 640px + sidebar-panel
+ * max 340px + gap ~20px ~= 1000px combined). */
+@media (max-width: 900px) {
+  .sidebar-panel {
+    max-height: 40vh;
+  }
 }
 
 .sidebar-header {
