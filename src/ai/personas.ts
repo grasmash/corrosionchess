@@ -117,7 +117,7 @@ export function pickQuip(p: Persona, ev: QuipEvent, rng: () => number = Math.ran
 const TOBY_BASE = paramsForRating(100); // level 1
 const BELLA_BASE = paramsForRating(250); // level 2 (blunderChance overridden per table)
 const MOM_BASE = paramsForRating(250);
-const DAD_BASE = paramsForRating(300);
+const DAD_BASE = paramsForRating(2000);
 const ADDIE_BASE = paramsForRating(700);
 const THEO_BASE = paramsForRating(1300); // level 3 (blunderChance overridden per table)
 
@@ -203,11 +203,11 @@ const MOM: Persona = {
 const DAD: Persona = {
   id: 'dad',
   name: 'Dad',
-  rating: 300,
+  rating: 2000,
   tagline: 'Likes to talk about chess',
   avatar: 'avatars/dad.png',
   level: DAD_BASE.level,
-  blunderChance: 0.25,
+  blunderChance: DAD_BASE.blunderChance,
   group: 'family',
   quips: {
     start: ["You know, in '92 I almost went pro.", 'Let me tell you about the Sicilian sometime.', 'Ready when you are, kiddo.'],
@@ -267,12 +267,12 @@ const THEO: Persona = {
   },
 };
 
-const KESTONY_BASE = paramsForRating(2000); // level 3, blunderChance 0 -- used as-is, no override
+const KESTONY_BASE = paramsForRating(2400); // level 3, blunderChance 0 -- used as-is, no override
 
 const KESTONY: Persona = {
   id: 'kestony',
   name: 'Coach Kestony',
-  rating: 2000,
+  rating: 2400,
   tagline: 'Your toughest lesson yet',
   avatar: 'avatars/kestony.png',
   level: KESTONY_BASE.level,

@@ -41,10 +41,10 @@ describe('roster shape', () => {
     expect(FAMILY_PERSONAS.length).toBe(7);
   });
 
-  it('includes Coach Kestony as a level-3, zero-blunder, rating-2000 coach persona', () => {
+  it('includes Coach Kestony as a level-3, zero-blunder, rating-2400 coach persona', () => {
     const kestony = FAMILY_PERSONAS.find(p => p.id === 'kestony')!;
     expect(kestony).toBeDefined();
-    expect(kestony.rating).toBe(2000);
+    expect(kestony.rating).toBe(2400);
     expect(kestony.level).toBe(3);
     expect(kestony.blunderChance).toBe(0);
     expect(kestony.group).toBe('coach');
@@ -124,7 +124,7 @@ describe('choosePersonaMove', () => {
   it('always returns a legal move over 20 plies, for a level-1, level-2, and level-3 persona', () => {
     const reps = [
       FAMILY_PERSONAS.find(p => p.id === 'toby')!,  // level 1
-      FAMILY_PERSONAS.find(p => p.id === 'dad')!,   // level 2
+      FAMILY_PERSONAS.find(p => p.id === 'mom')!,   // level 2
       FAMILY_PERSONAS.find(p => p.id === 'theo')!,  // level 3
     ];
     for (const persona of reps) {
