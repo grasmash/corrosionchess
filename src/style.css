@@ -742,3 +742,11 @@ input[type='text'] {
   padding: 0.55rem 0.9rem;
   font-size: 0.95rem;
 }
+
+.log-move {
+  color: var(--text);
+}
+
+.log-event {
+  color: var(--text-dim);
+}

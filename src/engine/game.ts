@@ -2,6 +2,7 @@ import type { Color, Config, GameState, Move } from './types';
 import { initialState, forwardDir, toAlg, fileOf } from './board';
 import { applyMoveCore, inCheck, legalMoves } from './legal';
 import { corrosionPhase } from './corrosion';
+import { moveToSan } from './notation';
 
 export function other(c: Color): Color {
   return c === 'w' ? 'b' : 'w';
@@ -36,8 +37,15 @@ export function applyMove(prev: GameState, m: Move): GameState {
   const isEnPassant = !!mover && mover.type === 'p' && s.epSquare === m.to && !destPiece &&
     fileOf(m.from, size) !== fileOf(m.to, size);
   const wasPieceCapture = (!!destPiece && destPiece.color !== moverColor) || isEnPassant;
+  const san = moveToSan(prev, m);
+  const moveRound = prev.round;
 
   applyMoveCore(s, m);
+
+  s.log.push({
+    round: moveRound,
+    text: moverColor === 'w' ? `${moveRound}. ${san}` : `${moveRound}… ${san}`,
+  });
 
   if (wasPieceCapture && s.config.tier1) {
     s.corrosions.push({

@@ -1,6 +1,10 @@
-import type { GameState, Move, Color, CorrosionUnit } from './types';
-import { fileOf, rankOf, sq, offsetOf } from './board';
+import type { GameState, Move, Color, CorrosionUnit, PieceType } from './types';
+import { fileOf, rankOf, sq, offsetOf, toAlg } from './board';
 import { pseudoMoves, isAttacked } from './movegen';
+
+const PIECE_NAMES: Record<PieceType, string> = {
+  p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King',
+};
 
 function findKing(s: GameState, color: Color): number {
   for (let i = 0; i < s.board.length; i++) {
@@ -19,8 +23,9 @@ export function inCheck(s: GameState, color: Color): boolean {
 
 // Resolve corrosion-capture landing on `to`. Returns true if the mover was
 // destroyed (and thus should not remain on the board).
-function resolveCorrosionCapture(s: GameState, to: number, moverColor: Color, moverIsKing: boolean): boolean {
+function resolveCorrosionCapture(s: GameState, to: number, moverColor: Color, moverIsKing: boolean): { destroyedMover: boolean; captured: boolean } {
   let destroyedMover = false;
+  let captured = false;
   const remaining: CorrosionUnit[] = [];
   for (const unit of s.corrosions) {
     const idx = unit.cells.indexOf(to);
@@ -35,6 +40,7 @@ function resolveCorrosionCapture(s: GameState, to: number, moverColor: Color, mo
       continue;
     }
     // destroy this cell from the unit
+    captured = true;
     if (!moverIsKing) destroyedMover = true;
     const cells = unit.cells.filter(c => c !== to);
     if (cells.length > 0) {
@@ -43,7 +49,7 @@ function resolveCorrosionCapture(s: GameState, to: number, moverColor: Color, mo
     // else: unit fully destroyed, drop it
   }
   s.corrosions = remaining;
-  return destroyedMover;
+  return { destroyedMover, captured };
 }
 
 export function applyMoveCore(s: GameState, m: Move): void {
@@ -101,9 +107,12 @@ export function applyMoveCore(s: GameState, m: Move): void {
   }
 
   // corrosion-capture resolution on destination
-  const destroyedMover = resolveCorrosionCapture(s, m.to, color, isKing);
+  const { destroyedMover, captured } = resolveCorrosionCapture(s, m.to, color, isKing);
   if (destroyedMover) {
     s.board[m.to] = null;
+    s.log.push({ round: s.round, text: `${PIECE_NAMES[mover.type]} destroyed capturing corrosion at ${toAlg(m.to, size)}` });
+  } else if (captured) {
+    s.log.push({ round: s.round, text: `Corrosion captured at ${toAlg(m.to, size)}` });
   }
 
   // king landing on purple cleanses it

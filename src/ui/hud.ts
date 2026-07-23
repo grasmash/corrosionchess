@@ -50,8 +50,8 @@ export interface HudOptions {
 }
 
 /**
- * Renders the (optional) net status line, turn indicator, last 8 log
- * events into the scrollable sidebar body, and a pinned action-row footer
+ * Renders the (optional) net status line, turn indicator, full move/event
+ * log into the scrollable sidebar body, and a pinned action-row footer
  * (New game; Copy invite link when hosting) into `el`. Full redraw each
  * call, matching the rest of the UI layer's render-from-state pattern.
  */
@@ -82,15 +82,16 @@ export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {})
 
   const log = document.createElement('div');
   log.className = 'hud-log';
-  const recent = gs.log.slice(-8);
-  for (const entry of recent) {
+  for (const entry of gs.log) {
     const line = document.createElement('div');
-    line.className = 'hud-log-entry';
-    line.textContent = `#${entry.round} ${entry.text}`;
+    const isMove = /^\d+[.…]/.test(entry.text);
+    line.className = `hud-log-entry ${isMove ? 'log-move' : 'log-event'}`;
+    line.textContent = entry.text;
     log.appendChild(line);
   }
   body.appendChild(log);
   el.appendChild(body);
+  log.scrollTop = log.scrollHeight;
 
   const actions = document.createElement('div');
   actions.className = 'sidebar-actions';
