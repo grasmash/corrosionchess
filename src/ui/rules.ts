@@ -173,6 +173,11 @@ export function showRules(onClose: () => void): void {
 
       if (!player) player = createScenarioPlayer(text => (status.textContent = text));
       player.boardEl.classList.add('rules-board');
+      // Eagerly show THIS section's starting position -- without this, the
+      // shared board keeps showing whatever the PREVIOUSLY viewed section
+      // last played (its end-state), under the new section's text, until
+      // Show Me is clicked.
+      player.stage(findScenario(scenarioId));
 
       const showBtn = document.createElement('button');
       showBtn.className = 'btn btn-primary';

@@ -215,6 +215,12 @@ export interface ScenarioPlayer {
    * real transition after a short pause so the viewer can register the
    * starting position first. */
   run: (scenario: Scenario) => void;
+  /** Renders `scenario`'s "before" position only -- no transition, no
+   * timeout. For callers (rules.ts) that reuse one player across several
+   * different scenarios and need the board to match whichever one is
+   * currently on screen BEFORE the viewer opts to play it (otherwise it'd
+   * keep showing the previous scenario's played end-state under new text). */
+  stage: (scenario: Scenario) => void;
   /** Scopes `--vfx-speed` to this player's board only (custom properties
    * inherit down through the DOM, never up to a live game elsewhere) --
    * `on` maps to 4x duration = 0.25x playback speed, matching the VFX Lab's
@@ -252,6 +258,10 @@ export function createScenarioPlayer(onStatusChange?: (text: string) => void): S
     }, 500);
   }
 
+  function stage(scenario: Scenario): void {
+    render(scenario.stage(), null);
+  }
+
   function setSlowMo(on: boolean): void {
     boardEl.style.setProperty('--vfx-speed', on ? '4' : '1');
   }
@@ -260,5 +270,5 @@ export function createScenarioPlayer(onStatusChange?: (text: string) => void): S
   // mount functions and the VFX Lab) -- not part of BoardView's contract.
   (window as unknown as { __cg: ReturnType<CgBoardView['api']> }).__cg = (view as unknown as CgBoardView).api();
 
-  return { boardEl, run, setSlowMo };
+  return { boardEl, run, stage, setSlowMo };
 }

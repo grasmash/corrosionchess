@@ -72,6 +72,24 @@ export function showSettings(onClose: () => void): void {
 
   const overlay = document.createElement('div');
   overlay.className = 'promotion-modal-overlay';
+  overlay.onclick = e => {
+    if (e.target === overlay) cancel();
+  };
+
+  function onKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Escape') cancel();
+  }
+  document.addEventListener('keydown', onKeydown);
+
+  function cancel(): void {
+    // Same semantics as the Cancel button: nothing was ever applied to the
+    // live board pre-Save (see the doc comment above), so there's nothing
+    // to actively revert -- just close without persisting the in-modal
+    // selection.
+    document.removeEventListener('keydown', onKeydown);
+    overlay.remove();
+    onClose();
+  }
 
   const modal = document.createElement('div');
   modal.className = 'promotion-modal settings-modal';
@@ -147,10 +165,7 @@ export function showSettings(onClose: () => void): void {
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'btn btn-secondary';
   cancelBtn.textContent = 'Cancel';
-  cancelBtn.onclick = () => {
-    overlay.remove();
-    onClose();
-  };
+  cancelBtn.onclick = () => cancel();
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn btn-primary';
@@ -158,6 +173,7 @@ export function showSettings(onClose: () => void): void {
   saveBtn.onclick = () => {
     setPieceSet(selectedPieceSet);
     setBoardTheme(selectedBoardTheme);
+    document.removeEventListener('keydown', onKeydown);
     overlay.remove();
     onClose();
   };
