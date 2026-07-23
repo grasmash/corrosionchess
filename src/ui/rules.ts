@@ -54,7 +54,7 @@ const SECTIONS: RuleSection[] = [
   },
   {
     title: 'Purple squares',
-    body: 'Nobody may move onto a purple square -- except a king, who cleanses it back to normal by stepping on it.',
+    body: 'Nobody may move onto a purple square -- except a king, who cleanses it back to normal by stepping on it. And if purple ever spreads beneath a standing piece, the void consumes it; only kings are immune.',
     scenarioId: 'king-cleanse',
   },
   {

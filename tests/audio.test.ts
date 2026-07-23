@@ -76,3 +76,9 @@ it('Corrosion goes CRITICAL -> corrosionCritical, not corrosionPromote', () => {
 it('currentVolume clamps garbage to default 0.7 (no localStorage under node)', () => {
   expect(currentVolume()).toBe(0.7);
 });
+
+it('Purple void consumes line -> corrosionKill', () => {
+  const prev = state([]);
+  const next = state(['1. e4', 'Purple void consumes queen at d4']);
+  expect(soundEventsForTransition(prev, next)).toContain('corrosionKill');
+});

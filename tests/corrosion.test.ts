@@ -162,3 +162,33 @@ it('class 3 paints purple behind it, kills own-color piece, bounces at edge', ()
   expect(s2.corrosions[0].cells).toEqual([fromAlg('d7', 8)]);
   expect(s2.purple).toContain(fromAlg('d8', 8));
 });
+
+it('purple void consumes a non-king piece standing on it during the phase', () => {
+  const s = base();
+  s.board[fromAlg('d4', 8)] = { color: 'w', type: 'q' };
+  s.purple = [fromAlg('d4', 8)];
+  corrosionPhase(s);
+  expect(s.board[fromAlg('d4', 8)]).toBeNull();
+  expect(s.purple).toContain(fromAlg('d4', 8));
+  expect(s.log.some(e => e.text.includes('Purple void consumes queen at d4'))).toBe(true);
+});
+
+it('kings are immune to purple decay', () => {
+  const s = base();
+  s.purple = [fromAlg('a1', 8)]; // white king's square
+  corrosionPhase(s);
+  expect(s.board[fromAlg('a1', 8)]).toEqual({ color: 'w', type: 'k' });
+  expect(s.purple).toContain(fromAlg('a1', 8));
+});
+
+it('cls-3 marching off a co-occupied birth square leaves purple that consumes the piece', () => {
+  const s = base();
+  // cls-2 went critical last round on its own back rank while co-occupying
+  // a friendly rook (cls 1/2 pass through friendlies). This phase the cls-3
+  // unit paints d1 purple as it leaves -- the rook must be consumed.
+  s.board[fromAlg('d1', 8)] = { color: 'w', type: 'r' };
+  s.corrosions = [unit({ cls: 3, dir: 1, cells: [fromAlg('d1', 8)], bornRound: 4 })];
+  corrosionPhase(s);
+  expect(s.purple).toContain(fromAlg('d1', 8));
+  expect(s.board[fromAlg('d1', 8)]).toBeNull();
+});

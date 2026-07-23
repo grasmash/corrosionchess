@@ -236,7 +236,23 @@ export function corrosionPhase(s: GameState): void {
     s.log.push({ round: s.round, text: 'Corrosion goes CRITICAL (class 3)' });
   }
 
-  // 10. Remove units with zero cells.
+  // 10. Purple decay: the void consumes any non-king piece standing on a
+  //     purple square. Pieces can never legally MOVE onto purple (movegen
+  //     bans every non-king landing), but purple can appear UNDER a piece:
+  //     a cls-2 unit goes critical on its own back rank while co-occupying
+  //     a friendly piece (cls 1/2 pass through friendlies), then paints
+  //     that square purple as it marches off in the next phase. Kings are
+  //     immune here just as they are to strikes -- they cleanse purple only
+  //     by stepping onto it (see applyMoveCore), not by standing on it.
+  for (const psq of s.purple) {
+    const occupant = s.board[psq];
+    if (occupant && occupant.type !== 'k') {
+      s.board[psq] = null;
+      s.log.push({ round: s.round, text: `Purple void consumes ${pieceName(occupant.type)} at ${toAlg(psq, size)}` });
+    }
+  }
+
+  // 11. Remove units with zero cells.
   //     This is the only place s.corrosions needs filtering: every step above
   //     checks/mutates unit.cells directly (never s.corrosions membership), so
   //     an emptied-but-not-yet-removed unit simply contributes zero cells to

@@ -63,7 +63,7 @@ export function soundEventsForTransition(prev: GameState, next: GameState): Soun
   const newLog = next.log.slice(prev.log.length).map(e => e.text);
   const san = newLog.find(t => /^\d+[.…]/.test(t)) ?? '';
 
-  if (newLog.some(t => t.startsWith('Corrosion destroys ') || t.includes('destroyed capturing corrosion')))
+  if (newLog.some(t => t.startsWith('Corrosion destroys ') || t.includes('destroyed capturing corrosion') || t.startsWith('Purple void consumes')))
     out.push('corrosionKill');
   if (newLog.some(t => t.startsWith('Corrosion goes CRITICAL'))) out.push('corrosionCritical');
   else if (newLog.some(t => t.startsWith('Corrosion strengthens'))) out.push('corrosionPromote');

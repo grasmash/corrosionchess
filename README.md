@@ -43,7 +43,10 @@ check/checkmate/stalemate) on top of this:
   leaves turns **purple**; purple squares are lethal to any other corrosion
   that enters them and illegal for pieces to move onto or through (knights may
   jump over purple, just not land on it) — except a king, which may step onto
-  a purple square safely and permanently cleanses it on the way out.
+  a purple square safely and permanently cleanses it on the way out. If purple
+  spreads beneath a standing piece (a class 2 going critical on a square it
+  shares with a friendly piece, then marching off), the void consumes that
+  piece during the corrosion phase; only kings are immune.
 - Each tier requires the one below it; disabling a tier just means the
   corrosion that would have been promoted is removed instead.
 

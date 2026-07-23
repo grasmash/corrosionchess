@@ -209,6 +209,10 @@ function allCorrosionSquares(gs: GameState): Set<number> {
       s.add(c - u.dir * gs.size);
     }
   }
+  // Purple squares consume non-king pieces standing on them during the
+  // corrosion phase (see corrosion.ts's purple-decay step) -- include them
+  // so those kills get the same ghost/dissolve treatment as strikes.
+  for (const p of gs.purple) s.add(p);
   return s;
 }
 
