@@ -82,13 +82,24 @@ export function pieceImageUrl(id: string, key: string): string {
   return `pieces/${id}/${key}.png`;
 }
 
+/**
+ * Fetches (creating if needed) the injected override `<style>` element and
+ * ALWAYS re-appends it to the very end of `<head>` -- `appendChild` on a
+ * node already in the document moves it rather than duplicating it. This is
+ * belt-and-suspenders against any DOM-order regression (e.g. a dev-server
+ * CSS hot-update strategy that removes-and-reinserts a stylesheet's `<style>`
+ * tag, landing it after ours): combined with the specificity bump on the
+ * rules themselves below, cascade order should never matter, but re-pinning
+ * this to the end on every call means it can't matter even if that
+ * assumption is ever wrong.
+ */
 function getOrCreateStyleEl(): HTMLStyleElement {
   let el = document.getElementById(STYLE_EL_ID) as HTMLStyleElement | null;
   if (!el) {
     el = document.createElement('style');
     el.id = STYLE_EL_ID;
-    document.head.appendChild(el);
   }
+  document.head.appendChild(el);
   return el;
 }
 
@@ -98,6 +109,16 @@ function getOrCreateStyleEl(): HTMLStyleElement {
  * needed since chessgroundx pieces are plain CSS backgrounds keyed by class.
  * `'classic'` (or any unknown id) empties the style element, which falls
  * back to pieces-cburnett.css's own rules.
+ *
+ * Selector is `.${SCOPE_CLASS}.cg-wrap piece...` (compound, no space) rather
+ * than just `.${SCOPE_CLASS} piece...` -- `pieceset-scope` and `cg-wrap` are
+ * two classes on the SAME board-mount element (see main.ts's
+ * buildGameLayout), so this is one extra class of specificity (0,4,1) over
+ * pieces-cburnett.css's own `.cg-wrap piece.<role>-piece.<color>` (0,3,1).
+ * Those two were previously EQUAL specificity, meaning whichever stylesheet
+ * happened to load/re-inject last in the DOM won the tie -- fragile under
+ * dev-server HMR churn. Specificity now decides it outright, independent of
+ * insertion order.
  */
 export function applyPieceSet(id: string): void {
   // No-op outside a browser (e.g. under vitest's DOM-free node environment,
@@ -118,7 +139,7 @@ export function applyPieceSet(id: string): void {
       const key = `${letter}${role}`;
       const url = pieceImageUrl(id, key);
       rules.push(
-        `.${SCOPE_CLASS} piece.${role}-piece.${cssClass} { background-image: url('${url}'); background-size: contain; }`
+        `.${SCOPE_CLASS}.cg-wrap piece.${role}-piece.${cssClass} { background-image: url('${url}'); background-size: contain; }`
       );
     }
   }
