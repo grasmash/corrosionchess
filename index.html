@@ -3,7 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="art/mark.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#312e2b" />
+    <!-- iPadOS: launching from the home screen only goes edge-to-edge and
+         hides Safari's chrome with these three -- apple-touch-icon above
+         covers the home screen icon itself. `mobile-web-app-capable` is the
+         standardized tag Chromium wants; `apple-mobile-web-app-capable` is
+         kept alongside it since Safari/iOS still only honors the prefixed
+         one. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Corrosion" />
     <title>Corrosion Chess</title>
     <!-- Splash's hero background is the largest paint on first load; preload
          it so it's not discovered only after main.ts's CSS import parses.
