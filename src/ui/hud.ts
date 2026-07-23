@@ -1,6 +1,7 @@
 import type { Color, GameState, PieceType } from '../engine/types';
 import { copyText } from './clipboard';
 import { showSettings } from './settings';
+import { showRules } from './rules';
 
 const PROMOTION_CHOICES: { type: PieceType; label: string }[] = [
   { type: 'q', label: 'Queen' },
@@ -194,6 +195,13 @@ export function renderHud(el: HTMLElement, gs: GameState, opts: HudOptions = {})
   // re-skins live with no re-render needed here.
   settingsBtn.onclick = () => showSettings(() => {});
   actions.appendChild(settingsBtn);
+
+  const rulesBtn = document.createElement('button');
+  rulesBtn.className = 'btn btn-secondary hud-settings-btn';
+  rulesBtn.textContent = '?';
+  rulesBtn.setAttribute('aria-label', 'How Corrosion Works');
+  rulesBtn.onclick = () => showRules(() => {});
+  actions.appendChild(rulesBtn);
 
   if (opts.isHost && opts.inviteUrl) {
     const inviteUrl = opts.inviteUrl;

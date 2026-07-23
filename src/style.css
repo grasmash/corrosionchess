@@ -1779,8 +1779,21 @@ input[type='text'] {
   width: 100%;
 }
 
-.splash-settings-btn {
+/* Plan 007: "How to Play" sits next to the Settings gear, not stacked with
+ * the three big mode buttons above -- this row carries the top margin the
+ * gear used to have on its own. */
+.splash-secondary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin-top: 1rem;
+}
+
+.splash-rules-btn {
+  font-size: 0.9rem;
+}
+
+.splash-settings-btn {
   width: 2.4rem;
   height: 2.4rem;
   padding: 0;
@@ -2064,4 +2077,128 @@ body[data-boardtheme='corroded'] .cg-wrap coords {
 .vfxlab-scenario-btn {
   font-size: 0.85rem;
   padding: 0.55rem 0.9rem;
+}
+
+/* --- RULES (plan 007): user-facing "How Corrosion Works" modal, shares the
+ * promotion modal's overlay/card shell (`.promotion-modal-overlay` /
+ * `.promotion-modal`) -- `.rules-modal` widens it and switches its
+ * `align-items` from the base's `center` to `stretch` so the header/body
+ * span the full card width instead of shrink-wrapping to content. --- */
+
+.rules-modal {
+  width: min(92vw, 720px);
+  max-height: min(88vh, 720px);
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.rules-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.rules-close-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 0.9rem;
+  flex: 0 0 auto;
+}
+
+.rules-body {
+  display: flex;
+  gap: 1.25rem;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.rules-nav-holder {
+  flex: 0 0 auto;
+  width: 200px;
+  overflow-y: auto;
+}
+
+.rules-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rules-nav-item {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.rules-nav-item:hover {
+  background: var(--elevated);
+  color: var(--text);
+}
+
+.rules-nav-item--active {
+  background: var(--elevated);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.rules-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.rules-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.rules-section-body {
+  margin: 0 0 1rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.rules-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rules-board {
+  width: min(80vw, 320px);
+  height: min(80vw, 320px);
+}
+
+.rules-stage-status {
+  text-align: center;
+}
+
+/* Narrow/short screens: stack nav above content instead of side-by-side,
+ * and let the nav wrap into a horizontal chip row instead of a tall list. */
+@media (max-width: 640px) {
+  .rules-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .rules-nav-holder {
+    width: 100%;
+    max-height: 30vh;
+  }
+
+  .rules-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 }

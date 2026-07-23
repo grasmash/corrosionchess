@@ -1,4 +1,5 @@
 import { showSettings } from './settings';
+import { showRules } from './rules';
 
 /**
  * Full-viewport home screen (chess.com-style) that replaces `showSetup` as
@@ -54,12 +55,23 @@ export function showSplash(onPlay: (mode: 'hotseat' | 'host' | 'bot') => void): 
   buttons.append(botBtn, hotseatBtn, onlineBtn);
   content.appendChild(buttons);
 
+  const secondaryRow = document.createElement('div');
+  secondaryRow.className = 'splash-secondary-row';
+
+  const rulesBtn = document.createElement('button');
+  rulesBtn.className = 'btn btn-secondary splash-rules-btn';
+  rulesBtn.textContent = 'How to Play';
+  rulesBtn.onclick = () => showRules(() => {});
+  secondaryRow.appendChild(rulesBtn);
+
   const settingsBtn = document.createElement('button');
   settingsBtn.className = 'btn btn-secondary splash-settings-btn';
   settingsBtn.textContent = '⚙';
   settingsBtn.setAttribute('aria-label', 'Settings');
   settingsBtn.onclick = () => showSettings(() => {});
-  content.appendChild(settingsBtn);
+  secondaryRow.appendChild(settingsBtn);
+
+  content.appendChild(secondaryRow);
 
   screen.appendChild(content);
   el.appendChild(screen);

@@ -14,6 +14,7 @@ fully before starting, honor its STOP conditions, and update your row when done.
 | 004  | Splash home screen + piece-set picker | P1 | M | 001, 002, 003 | DONE |
 | 005  | Board color themes in the settings modal | P1 | S | 004 | DONE |
 | 006  | "Corroded" game theme — key-art look in gameplay | P1 | M | 005, VFX iteration | DONE |
+| 007  | Rules explainer with live simulated examples | P1 | M | VFX Lab | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with rationale)
 
