@@ -40,12 +40,12 @@ export function applyMove(prev: GameState, m: Move): GameState {
   const san = moveToSan(prev, m);
   const moveRound = prev.round;
 
-  applyMoveCore(s, m);
-
   s.log.push({
     round: moveRound,
     text: moverColor === 'w' ? `${moveRound}. ${san}` : `${moveRound}… ${san}`,
   });
+
+  applyMoveCore(s, m);
 
   if (wasPieceCapture && s.config.tier1) {
     s.corrosions.push({

@@ -124,6 +124,20 @@ it('game.ts integration: move entry appears before the corrosion-spawn entry', (
   expect(spawnIdx).toBeGreaterThan(moveIdx);
 });
 
+it('game.ts integration: SAN move entry precedes its own corrosion-capture destruction event', () => {
+  let s = newGame(cfg);
+  s.board = s.board.map(() => null);
+  s.board[fromAlg('a1', 8)] = { color: 'w', type: 'k' };
+  s.board[fromAlg('h8', 8)] = { color: 'b', type: 'k' };
+  s.board[fromAlg('d4', 8)] = { color: 'w', type: 'r' };
+  s.corrosions = [{ id: 1, color: 'b', cls: 1, cells: [fromAlg('d6', 8)], dir: -1, bornRound: 0 }];
+  s = applyMove(s, mv(s, 'd4', 'd6'));
+  const moveIdx = s.log.findIndex(e => e.text === '1. Rd6');
+  const destroyIdx = s.log.findIndex(e => e.text === 'Rook destroyed capturing corrosion at d6');
+  expect(moveIdx).toBeGreaterThanOrEqual(0);
+  expect(destroyIdx).toBeGreaterThan(moveIdx);
+});
+
 it('legal.ts integration: rook captures corrosion logs the destruction', () => {
   const s = empty();
   put(s, 'a1', 'w', 'k'); put(s, 'h8', 'b', 'k'); put(s, 'd4', 'w', 'r');
