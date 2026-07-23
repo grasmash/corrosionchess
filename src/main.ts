@@ -319,7 +319,13 @@ function buildGameLayout(config: Config): GameLayoutParts {
   topBar.className = 'player-bar player-bar--top';
 
   const boardEl = document.createElement('div');
-  boardEl.className = 'board-wrap';
+  // `pieceset-scope` (plan 004 fix): createBoardView's mount() (cgboard.ts,
+  // out of scope for this plan) adds `cg-wrap` to this same element for
+  // chessgroundx/cburnett's own CSS -- `pieceset-scope` is a second,
+  // dedicated hook so piecesets.ts's injected override only ever re-skins
+  // the actual live board, never anything else (e.g. the settings modal's
+  // preview) that also happens to carry `cg-wrap` to read cburnett's rules.
+  boardEl.className = 'board-wrap pieceset-scope';
   boardEl.id = 'board';
 
   const bottomBar = document.createElement('div');

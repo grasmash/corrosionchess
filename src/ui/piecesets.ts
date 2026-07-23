@@ -24,6 +24,13 @@ export const PIECE_SETS: PieceSet[] = [
 
 const STORAGE_KEY = 'pieceset';
 const STYLE_EL_ID = 'pieceset-style';
+/** Class the live board's mount root carries (added alongside `cg-wrap` in
+ * main.ts's buildGameLayout) so the injected override below only ever
+ * touches the real board -- NOT any other element that happens to reuse
+ * `cg-wrap` to read cburnett's own CSS, e.g. the settings modal's preview,
+ * which needs the true classic sprites regardless of which set is currently
+ * applied to the game. */
+const SCOPE_CLASS = 'pieceset-scope';
 
 /** role letter × color letter -> the cburnett-scheme class pair rendered by
  * chessgroundx's util.js pieceClasses() (confirmed in pieces-cburnett.css):
@@ -41,15 +48,29 @@ function isKnownSet(id: string): boolean {
 
 /** Reads the persisted piece-set id, falling back to `'classic'` if nothing
  * is stored or the stored value doesn't match a known set (e.g. an old id
- * from a since-removed set, or hand-edited localStorage). */
+ * from a since-removed set, or hand-edited localStorage). Also falls back to
+ * `'classic'` if `localStorage` throws (private-browsing/storage-disabled
+ * mode in some browsers) -- a boot-time throw here would kill `start()`
+ * before anything renders. */
 export function currentPieceSet(): string {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  let stored: string | null;
+  try {
+    stored = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return 'classic';
+  }
   return stored && isKnownSet(stored) ? stored : 'classic';
 }
 
-/** Persists the choice and immediately re-skins any mounted board. */
+/** Persists the choice and immediately re-skins any mounted board. Swallows
+ * a persistence failure (see `currentPieceSet`) -- the in-memory re-skin via
+ * `applyPieceSet` still happens either way, it just won't survive a reload. */
 export function setPieceSet(id: string): void {
-  localStorage.setItem(STORAGE_KEY, id);
+  try {
+    localStorage.setItem(STORAGE_KEY, id);
+  } catch {
+    /* storage unavailable -- re-skin still applies for this session */
+  }
   applyPieceSet(id);
 }
 
@@ -97,7 +118,7 @@ export function applyPieceSet(id: string): void {
       const key = `${letter}${role}`;
       const url = pieceImageUrl(id, key);
       rules.push(
-        `.cg-wrap piece.${role}-piece.${cssClass} { background-image: url('${url}'); background-size: contain; }`
+        `.${SCOPE_CLASS} piece.${role}-piece.${cssClass} { background-image: url('${url}'); background-size: contain; }`
       );
     }
   }

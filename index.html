@@ -2,13 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/art/mark.png" />
+    <link rel="icon" type="image/png" href="art/mark.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Corrosion Chess</title>
     <!-- Splash's hero background is the largest paint on first load; preload
-         it so it's not discovered only after main.ts's CSS import parses. -->
-    <link rel="preload" as="image" href="/art/hero.png" />
-    <link rel="preload" as="image" href="/art/hero-tall.png" media="(max-aspect-ratio: 1/1)" />
+         it so it's not discovered only after main.ts's CSS import parses.
+         Relative (no leading slash) to match pieceImageUrl's subpath-deploy
+         convention (see piecesets.ts). -->
+    <link rel="preload" as="image" href="art/hero.png" />
+    <link rel="preload" as="image" href="art/hero-tall.png" media="(max-aspect-ratio: 1/1)" />
   </head>
   <body>
     <div id="app"></div>
