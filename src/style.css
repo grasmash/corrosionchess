@@ -2303,3 +2303,17 @@ body[data-boardtheme='corroded'] .cg-wrap coords {
     flex-wrap: wrap;
   }
 }
+
+/* Plan 008: audio settings controls (checkboxes + volume slider), sharing
+   the .settings-field row layout used by the Pieces/Board dropdowns. */
+.settings-field input[type='checkbox'] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: #7fff5a;
+  flex: 0 0 auto;
+}
+
+.settings-slider {
+  width: 100%;
+  accent-color: #7fff5a;
+}

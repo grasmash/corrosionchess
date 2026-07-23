@@ -52,6 +52,23 @@ export default defineConfig({
               },
             },
           },
+          {
+            urlPattern: /\/audio\/.*\.mp3$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'corrosion-audio-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              // Browsers fetch media with Range headers -- a cached full
+              // response without this can fail to play from cache.
+              rangeRequests: true,
+            },
+          },
         ],
       },
     }),
