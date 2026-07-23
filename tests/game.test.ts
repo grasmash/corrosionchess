@@ -70,3 +70,29 @@ it('round increments only after black moves', () => {
   s = applyMove(s, mv(s, 'e7', 'e5'));
   expect(s.round).toBe(2);
 });
+
+it('bare kings is an immediate draw by insufficient material', () => {
+  let s = newGame(cfg);
+  s.board = s.board.map(() => null);
+  s.board[fromAlg('a1', 8)] = { color: 'w', type: 'k' };
+  s.board[fromAlg('h8', 8)] = { color: 'b', type: 'k' };
+  s.board[fromAlg('b3', 8)] = { color: 'b', type: 'n' };
+  // White king captures the last non-king piece -> only kings remain.
+  s.board[fromAlg('a1', 8)] = null;
+  s.board[fromAlg('a2', 8)] = { color: 'w', type: 'k' };
+  s = applyMove(s, mv(s, 'a2', 'b3'));
+  expect(s.result).toEqual({ winner: null, reason: 'insufficient material' });
+});
+
+it('kings-only draw fires even while corrosion units linger', () => {
+  let s = newGame(cfg);
+  s.board = s.board.map(() => null);
+  s.board[fromAlg('a2', 8)] = { color: 'w', type: 'k' };
+  s.board[fromAlg('h8', 8)] = { color: 'b', type: 'k' };
+  s.board[fromAlg('b3', 8)] = { color: 'b', type: 'p' };
+  s.corrosions = [{ id: 1, color: 'b', cls: 1, cells: [fromAlg('e5', 8)], dir: -1, bornRound: 0 }];
+  s = applyMove(s, mv(s, 'a2', 'b3'));
+  // Corrosion cannot harm kings (strikes are blocked), so lingering units
+  // don't stop the dead-position draw.
+  expect(s.result).toEqual({ winner: null, reason: 'insufficient material' });
+});

@@ -12,7 +12,22 @@ export function newGame(config: Config): GameState {
   return initialState(config);
 }
 
+/** Dead position: only the two kings remain. Corrosion can never harm a
+ * king (strikes are blocked — see strikeAt in corrosion.ts) and with no
+ * other pieces no capture can ever spawn new corrosion, so no sequence of
+ * moves leads to mate regardless of any units or purple still on the
+ * board. Richer insufficient-material cases (K+B vs K etc.) are deliberately
+ * NOT claimed here: corrosion changes what "insufficient" means and the
+ * bare-kings case is the only one that's unambiguous in this variant. */
+function onlyKingsRemain(s: GameState): boolean {
+  return s.board.every(p => !p || p.type === 'k');
+}
+
 function computeResult(s: GameState): void {
+  if (onlyKingsRemain(s)) {
+    s.result = { winner: null, reason: 'insufficient material' };
+    return;
+  }
   if (legalMoves(s).length > 0) return;
   if (inCheck(s, s.turn)) {
     s.result = { winner: other(s.turn), reason: 'checkmate' };
