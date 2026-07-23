@@ -343,9 +343,14 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
         // startJoinGame) -- but if the host process itself restarted and
         // re-sent one on top of an existing session, treat it the same as
         // a resync: it carries the full authoritative state.
-        state = msg.state;
-        ply = plyFromState(state);
-        render();
+        // init/resync travel host->guest ONLY; the host must never accept a
+        // full-state overwrite from the wire (mirrors the resync-request gate
+        // below).
+        if (!isHost) {
+          state = msg.state;
+          ply = plyFromState(state);
+          render();
+        }
         break;
       case 'move':
         if (msg.seq === ply) {
@@ -368,9 +373,12 @@ function mountOnlineGame(params: OnlineGameParams): (s: Session) => void {
         if (isHost) sendResyncFromHost();
         break;
       case 'resync':
-        state = msg.state;
-        ply = msg.seq;
-        render();
+        // Same host->guest-only invariant as 'init' above.
+        if (!isHost) {
+          state = msg.state;
+          ply = msg.seq;
+          render();
+        }
         break;
     }
   }
