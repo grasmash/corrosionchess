@@ -194,14 +194,19 @@ function worstCaseReply(state: GameState, botColor: Color, alpha: number, deadli
 }
 
 // Depth-2 alpha-beta search: the bot's own move, then the opponent's best
-// reply. When the bot's own move is White's, `state` (after that move) still
-// holds un-marched corrosions -- evaluate()'s one-ply threat lookahead
-// applies directly. When the opponent's reply is Black's, applyMove() runs
-// the real corrosion phase internally, so the reply states the search scores
-// already reflect actual marches, swaps, strikes, and promotions.
-function chooseAlphaBeta(state: GameState, moves: Move[], rng: () => number): Move {
+// reply. applyMove() only runs the real corrosion phase when the mover is
+// Black, so exactly one of the two plies searched here reflects an actual
+// march (with swaps, strikes, and promotions already resolved) -- the other
+// ply's state still holds un-marched corrosions, and it's there that
+// evaluate()'s one-ply threat-lookahead term (see threatenedSquares) is
+// doing real work instead of being redundant with the engine. Concretely:
+// if the bot is White, its own move (ply 1) leaves corrosions un-marched
+// (the lookahead matters) and Black's reply (ply 2) marches them for real;
+// if the bot is Black, its own move (ply 1) marches them for real and
+// White's reply (ply 2) is the un-marched ply where the lookahead matters.
+function chooseAlphaBeta(state: GameState, moves: Move[], rng: () => number, timeBudgetMs: number): Move {
   const botColor = state.turn;
-  const deadline = Date.now() + SEARCH_TIME_BUDGET_MS;
+  const deadline = Date.now() + timeBudgetMs;
   const ordered = orderMoves(state, moves);
 
   let bestScore = -Infinity;
@@ -225,18 +230,29 @@ function chooseAlphaBeta(state: GameState, moves: Move[], rng: () => number): Mo
   return pickRandom(best, rng);
 }
 
+export interface ChooseBotMoveOptions {
+  /** Soft time budget (ms) for level 3's search. Defaults to 1500. */
+  timeBudgetMs?: number;
+}
+
 /**
  * Choose a move for the bot at the given difficulty level.
  * - Level 1 "Rusty": uniform random legal move.
  * - Level 2 "Corrode": greedy 1-ply evaluation.
  * - Level 3 "Meltdown": depth-2 alpha-beta (own move + opponent's best
- *   reply) with capture/promotion move ordering and a soft time budget.
+ *   reply) with capture/promotion move ordering and a soft time budget
+ *   (`opts.timeBudgetMs`, default 1500; ignored by levels 1-2).
  *
  * `rng` is injectable (defaults to Math.random) so callers can get
  * deterministic behavior for tests/replays. Throws if the game is already
  * over; never returns a move that isn't in legalMoves(state).
  */
-export function chooseBotMove(state: GameState, level: BotLevel, rng: () => number = Math.random): Move {
+export function chooseBotMove(
+  state: GameState,
+  level: BotLevel,
+  rng: () => number = Math.random,
+  opts?: ChooseBotMoveOptions,
+): Move {
   if (state.result) throw new Error('Cannot choose a bot move: game is already over');
   const moves = legalMoves(state);
   if (moves.length === 0) throw new Error('Cannot choose a bot move: no legal moves available');
@@ -244,6 +260,6 @@ export function chooseBotMove(state: GameState, level: BotLevel, rng: () => numb
   switch (level) {
     case 1: return chooseRandom(moves, rng);
     case 2: return chooseGreedy(state, moves, rng);
-    case 3: return chooseAlphaBeta(state, moves, rng);
+    case 3: return chooseAlphaBeta(state, moves, rng, opts?.timeBudgetMs ?? SEARCH_TIME_BUDGET_MS);
   }
 }

@@ -112,7 +112,11 @@ describe('chooseBotMove: legality property test (all levels)', () => {
         if (s.result) break;
         const legal = legalMoves(s);
         expect(legal.length).toBeGreaterThan(0);
-        const move = chooseBotMove(s, level, rng);
+        // Level 3 defaults to a 1500ms soft budget per move, which would
+        // make 20 plies of self-play flirt with vitest's test timeout on
+        // slow CI; a much smaller budget is plenty to exercise the search
+        // and its legality guarantees without the real-world time cost.
+        const move = chooseBotMove(s, level, rng, { timeBudgetMs: 150 });
         expect(legal.some(m => m.from === move.from && m.to === move.to && m.promotion === move.promotion)).toBe(true);
         s = applyMove(s, move);
       }
@@ -144,15 +148,28 @@ describe('evaluate', () => {
     expect(evaluate(withThreat, 'w')).toBeLessThan(evaluate(withoutThreat, 'w'));
   });
 
-  it('does not penalize a king standing on a threatened square', () => {
-    const s = empty(cfg);
-    put(s, 'd4', 'w', 'k');
-    put(s, 'h8', 'b', 'k');
-    s.corrosions = [{ id: 1, color: 'b', cls: 1, cells: [fromAlg('d3', 8)], dir: 1, bornRound: 1 }];
-    const s2 = empty(cfg);
-    put(s2, 'd4', 'w', 'k');
-    put(s2, 'h8', 'b', 'k');
-    expect(evaluate(s, 'w')).toBe(evaluate(s2, 'w'));
+  it('does not penalize a king on a threatened square, unlike a non-king piece on another threatened square', () => {
+    // A king's material value is 0, so a king-only board can't distinguish
+    // "king exempt" from "king penalized" (0 discounted is still 0) -- add a
+    // knight on its own threatened square as a witness: if the king
+    // exemption guard were dropped or inverted, this delta would drift from
+    // the knight-only discount below.
+    const baseline = empty(cfg);
+    put(baseline, 'd4', 'w', 'k');
+    put(baseline, 'g6', 'w', 'n');
+    put(baseline, 'a8', 'b', 'k');
+
+    const withThreats = empty(cfg);
+    put(withThreats, 'd4', 'w', 'k');
+    put(withThreats, 'g6', 'w', 'n');
+    put(withThreats, 'a8', 'b', 'k');
+    withThreats.corrosions = [
+      { id: 1, color: 'b', cls: 1, cells: [fromAlg('d3', 8)], dir: 1, bornRound: 1 }, // marches onto the king's d4
+      { id: 2, color: 'b', cls: 1, cells: [fromAlg('g5', 8)], dir: 1, bornRound: 1 }, // marches onto the knight's g6
+    ];
+
+    const delta = evaluate(baseline, 'w') - evaluate(withThreats, 'w');
+    expect(delta).toBeCloseTo(3 * 0.6, 5); // only the knight's value (3) takes the ~60% hit
   });
 });
 
