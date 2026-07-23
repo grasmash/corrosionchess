@@ -40,19 +40,35 @@ export function describeConfig(c: Config): string {
   return `${tierText} · ${boardText}`;
 }
 
+/** Per-mode copy: the splash screen is the ONLY place a player picks a mode
+ * (Play Bots / Pass & Play / Play Online) -- this config card just
+ * configures the corrosion tiers/board size for whichever mode was already
+ * chosen, so its title and primary-button label reflect that mode instead
+ * of asking the player to choose again. */
+const MODE_TITLE: Record<'hotseat' | 'host' | 'bot', string> = {
+  hotseat: 'Pass & Play',
+  host: 'Play Online',
+  bot: 'Play a Bot',
+};
+const MODE_PRIMARY_LABEL: Record<'hotseat' | 'host' | 'bot', string> = {
+  hotseat: 'Start Game',
+  host: 'Create Game',
+  bot: 'Choose Bot',
+};
+
 /**
- * Renders the setup screen into `#app` and invokes `onStart` once the user
- * picks a mode. Enforces the tier dependency chain (tier N requires tier
- * N-1 checked) directly in the checkbox change handlers, not just visually.
- *
- * `initialMode` (plan 004: splash routes here as its "step 2" config card)
- * preselects which of the three buttons is styled `.btn-primary` -- all
- * three remain fully clickable regardless, this only visually highlights the
- * mode the player already chose on the splash screen. Omitting it keeps the
- * original default (hotseat primary), so every pre-splash caller is
- * unaffected.
+ * Renders the config card (tier toggles + board size) into `#app` for a mode
+ * already chosen on the splash screen, and invokes `onStart` once the player
+ * confirms. Enforces the tier dependency chain (tier N requires tier N-1
+ * checked) directly in the checkbox change handlers, not just visually.
+ * `onBack` wires the Back button, which returns to the splash screen (the
+ * only mode chooser -- see plan note above).
  */
-export function showSetup(onStart: (r: SetupResult) => void, initialMode: 'hotseat' | 'host' | 'bot' = 'hotseat'): void {
+export function showSetup(
+  onStart: (r: SetupResult) => void,
+  onBack: () => void,
+  mode: 'hotseat' | 'host' | 'bot',
+): void {
   const el = document.querySelector<HTMLDivElement>('#app');
   if (!el) throw new Error('showSetup: #app element not found');
   el.innerHTML = '';
@@ -62,7 +78,7 @@ export function showSetup(onStart: (r: SetupResult) => void, initialMode: 'hotse
 
   const title = document.createElement('h1');
   title.className = 'setup-title';
-  title.textContent = 'Corrosion Chess';
+  title.textContent = MODE_TITLE[mode];
   wrap.appendChild(title);
 
   const form = document.createElement('div');
@@ -129,26 +145,17 @@ export function showSetup(onStart: (r: SetupResult) => void, initialMode: 'hotse
     };
   }
 
-  function modeClass(mode: 'hotseat' | 'host' | 'bot'): string {
-    return `btn ${mode === initialMode ? 'btn-primary' : 'btn-secondary'}`;
-  }
+  const backBtn = document.createElement('button');
+  backBtn.className = 'btn btn-secondary';
+  backBtn.textContent = 'Back';
+  backBtn.onclick = onBack;
 
-  const hotseatBtn = document.createElement('button');
-  hotseatBtn.className = modeClass('hotseat');
-  hotseatBtn.textContent = 'Play Hotseat';
-  hotseatBtn.onclick = () => onStart({ config: currentConfig(), mode: 'hotseat' });
+  const primaryBtn = document.createElement('button');
+  primaryBtn.className = 'btn btn-primary';
+  primaryBtn.textContent = MODE_PRIMARY_LABEL[mode];
+  primaryBtn.onclick = () => onStart({ config: currentConfig(), mode });
 
-  const botBtn = document.createElement('button');
-  botBtn.className = modeClass('bot');
-  botBtn.textContent = 'Play vs Bot';
-  botBtn.onclick = () => onStart({ config: currentConfig(), mode: 'bot' });
-
-  const onlineBtn = document.createElement('button');
-  onlineBtn.className = modeClass('host');
-  onlineBtn.textContent = 'Create Online Game';
-  onlineBtn.onclick = () => onStart({ config: currentConfig(), mode: 'host' });
-
-  buttons.append(hotseatBtn, botBtn, onlineBtn);
+  buttons.append(backBtn, primaryBtn);
   wrap.appendChild(buttons);
 
   const rulesHint = document.createElement('p');

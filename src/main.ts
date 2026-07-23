@@ -72,20 +72,24 @@ function start(): void {
   }
 
   showSplash(mode => {
-    showSetup(result => {
-      if (result.mode === 'host') {
-        startHostGame(result.config);
-      } else if (result.mode === 'bot') {
-        showBotSelect(
-          persona => startBotGame(result.config, persona),
-          () => start(),
-        );
-      } else {
-        // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
-        // 'join' is intercepted by start() above before showSetup() ever runs.
-        startGame(result);
-      }
-    }, mode);
+    showSetup(
+      result => {
+        if (result.mode === 'host') {
+          startHostGame(result.config);
+        } else if (result.mode === 'bot') {
+          showBotSelect(
+            persona => startBotGame(result.config, persona),
+            () => start(),
+          );
+        } else {
+          // Only 'hotseat', 'host', and 'bot' are reachable from showSetup:
+          // 'join' is intercepted by start() above before showSetup() ever runs.
+          startGame(result);
+        }
+      },
+      () => start(), // Back -> splash is the only mode chooser now.
+      mode,
+    );
   });
 }
 
